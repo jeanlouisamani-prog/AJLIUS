@@ -2,7 +2,10 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#2D6A4F">
 <title>AJLUS · Restor OS</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -721,6 +724,247 @@ select.micro:focus{border-color:var(--green2);}
   color: rgba(255,255,255,.8);
 }
 
+/* ══════════════════════════════════════════════════
+   AMÉLIORATIONS RESPONSIVE — MOBILE FIRST
+   ══════════════════════════════════════════════════ */
+
+/* Inputs plus grands sur mobile (évite le zoom auto iOS) */
+@media(max-width:700px){
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+  .fld input, .fld select, .fld textarea {
+    font-size: 16px !important;
+    padding: 12px 14px;
+  }
+  .pin-key { font-size: 1.3rem !important; padding: 16px 0 !important; }
+
+  /* Toast en bas centré sur mobile */
+  .toast {
+    bottom: 80px;
+    right: 12px;
+    left: 12px;
+    max-width: 100%;
+    font-size: .82rem;
+  }
+
+  /* FAB plus gros, plus accessible */
+  .fab-main { width: 58px; height: 58px; font-size: 1.7rem; }
+  .fab-wrap { right: 16px; bottom: 80px; }
+
+  /* Cartes KPI — texte adapté */
+  .kcard { padding: 14px 12px; }
+  .kcard-value { font-size: 1.25rem; }
+  .kcard-label { font-size: .58rem; }
+
+  /* Tables — scroll horizontal propre */
+  .scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; }
+  .tbl { min-width: 520px; font-size: .74rem; }
+  .tbl th { padding: 8px 10px; font-size: .52rem; }
+  .tbl td { padding: 9px 10px; }
+
+  /* Modal plein écran depuis le bas */
+  .modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 92vh !important;
+    border-radius: 24px 24px 0 0 !important;
+    margin: 0 !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+  .overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+  .modal-head { padding: 16px 18px 12px; }
+  .modal-body { padding: 16px 18px; }
+  .modal-foot { padding: 12px 18px; }
+
+  /* Formulaires en 1 colonne sur mobile */
+  .frow { grid-template-columns: 1fr !important; gap: 10px; }
+
+  /* Section header — boutons pleine largeur si isolés */
+  .sec-hd.fxb {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .sec-hd.fxb > .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 16px;
+    font-size: .82rem;
+  }
+
+  /* Bar chart — hauteur réduite */
+  #ca-chart { height: 120px !important; }
+  .bar-chart { height: 120px !important; }
+
+  /* Prospect grid — 1 colonne */
+  .pgrid { grid-template-columns: 1fr !important; }
+
+  /* Client grid — 1 colonne */
+  .client-grid { grid-template-columns: 1fr !important; }
+
+  /* Stock grid compact */
+  .sgrid { grid-template-columns: 1fr 1fr !important; gap: 8px; }
+
+  /* Gcard head wrap sur mobile */
+  .gcard-head { flex-wrap: wrap; gap: 8px; }
+  .gcard-title { font-size: .82rem; }
+
+  /* Confirm box plein écran bas */
+  .confirm-box { width: 94vw !important; padding: 22px 18px; }
+
+  /* Burger btn plus grand */
+  #burger-btn {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 1.15rem !important;
+  }
+
+  /* Topbar title plus compact */
+  .tb-page { font-size: .85rem; max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Search box pleine largeur dans header */
+  .search-box { width: 100%; }
+  .search-box input { width: 100% !important; }
+
+  /* Boutons dans tableaux */
+  .btn-icon { width: 34px; height: 34px; }
+
+  /* Pay selector 1 colonne */
+  .pay-selector { grid-template-columns: 1fr !important; }
+
+  /* Sbfoot compact */
+  .sb-foot-text { font-size: .55rem; }
+
+  /* Section KPI depenses */
+  #dep-cats .depcat-label { font-size: .7rem; }
+
+  /* Tabs EJ sur mobile */
+  .ej-tabs { flex-wrap: wrap; gap: 4px; }
+  .ej-tabs button { font-size: .7rem; padding: 6px 10px; flex: 1; }
+
+  /* Filtre pills scroll horizontal */
+  .fpills { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  .fpill { flex-shrink: 0; }
+
+  /* Gcard body padding réduit */
+  .gcard-body { padding: 14px 12px; }
+
+  /* Fiche client header */
+  .fiche-head { flex-direction: column !important; gap: 12px; }
+  
+  /* Boutons actions pcard */
+  .pcard-actions { flex-wrap: wrap; }
+  .pcard-actions .btn { flex: 1; justify-content: center; font-size: .72rem; }
+}
+
+/* ── Très petit écran (≤380px) ── */
+@media(max-width:380px){
+  .kcard-value { font-size: 1.1rem; }
+  .kcard { padding: 11px 10px; }
+  .sgrid { grid-template-columns: 1fr !important; }
+  .modal { max-height: 95vh !important; }
+  .main { padding: 10px 8px 85px; }
+  .sec-title { font-size: .92rem; }
+  .gcard-head { padding: 12px 12px 10px; }
+}
+
+/* ── Tablette (700px – 1100px) ── */
+@media(min-width:701px) and (max-width:1100px){
+  .topbar { left: 248px; }
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .g3 { grid-template-columns: 1fr 1fr; }
+  .pgrid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .modal { width: 90vw !important; }
+  .main { padding: 22px 20px 40px; }
+}
+
+/* ── Desktop (>1100px) ── */
+@media(min-width:1101px){
+  .kpi-row { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ══ PAGE PARAMÈTRES ══ */
+.params-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+.reset-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
+  padding: 14px 18px;
+  background: rgba(230,57,70,0.07);
+  border-radius: 14px;
+  border: 1.5px solid rgba(230,57,70,0.25);
+  flex-wrap: wrap;
+}
+.reset-banner > div { flex: 1; min-width: 180px; }
+.reset-banner button { flex-shrink: 0; }
+
+/* ══ JOURNAL — select style ══ */
+.form-sel {
+  padding: 7px 10px;
+  border: 1px solid var(--border2);
+  border-radius: 9px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: .78rem;
+  color: var(--text);
+  background: var(--bg2);
+  outline: none;
+  cursor: pointer;
+  transition: border-color .14s;
+}
+.form-sel:focus { border-color: var(--green2); box-shadow: 0 0 0 3px var(--green-s); }
+
+/* ══ Journal filters wrap ══ */
+.journal-filters {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.journal-filters .form-sel { flex: 1; min-width: 140px; }
+
+/* ══ RESPONSIVE paramètres ══ */
+@media(max-width:700px){
+  .params-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .reset-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .reset-banner button {
+    width: 100%;
+    padding: 11px;
+    font-size: .82rem;
+  }
+  .pin-change-row { flex-wrap: wrap; gap: 8px; }
+  .pin-input { width: 100% !important; }
+  .pin-change-row > span { font-size: 1.4rem; }
+  .journal-filters { flex-direction: column; }
+  .journal-filters .form-sel { width: 100%; min-width: unset; font-size: 16px; }
+  #journal-list { max-height: 55vh; }
+  .log-time { min-width: 60px; font-size: .6rem; }
+}
+
+@media(max-width:380px){
+  .params-grid { gap: 12px; }
+}
+
 </style>
 </head>
 <body>
@@ -809,14 +1053,21 @@ select.micro:focus{border-color:var(--green2);}
       <div class="sb-group-label">Production</div>
       <div class="ni" onclick="goTo('stock')"><div class="ni-ico">📦</div><span class="ni-label">Stock Restor</span></div>
     </div>
-    <div class="sb-group">
+    <div class="sb-group" id="nav-rh" style="display:none">
       <div class="sb-group-label">Ressources Humaines</div>
       <div class="ni" onclick="goTo('employes')"><div class="ni-ico">👷</div><span class="ni-label">Employés Journaliers</span><span class="ni-badge" id="nb-ej" style="background:#2980B9">0</span></div>
     </div>
     <div class="sb-group" id="nav-manager" style="display:none">
       <div class="sb-group-label">Manager</div>
       <div class="ni" onclick="goTo('journal')"><div class="ni-ico">📋</div><span class="ni-label">Journal activité</span></div>
-      <div class="ni" onclick="goTo('params')"><div class="ni-ico">⚙️</div><span class="ni-label">Paramètres</span></div>
+      <div class="ni" data-page="params" onclick="
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-params').classList.add('active');
+  this.classList.add('active');
+  document.getElementById('tb-page').textContent='Paramètres';
+  if(typeof rEquipe==='function') rEquipe();
+"><div class="ni-ico">⚙️</div><span class="ni-label">Paramètres</span></div>
     </div>
   </div>
     </div>
@@ -1244,17 +1495,6 @@ select.micro:focus{border-color:var(--green2);}
   </div>
 </div>
 
-</div><!-- /main -->
-
-<!-- ══ NAVBAR MOBILE ══ -->
-<div id="mobile-nav">
-  <div class="mn-items" id="mn-items">
-    <!-- Items générés dynamiquement selon le rôle -->
-  </div>
-</div>
-
-
-
 <!-- ═══ JOURNAL ACTIVITÉ ═══ -->
 <div class="page" id="page-journal">
   <div class="sec-hd fxb">
@@ -1262,15 +1502,15 @@ select.micro:focus{border-color:var(--green2);}
     <button class="btn btn-outline btn-sm" onclick="clearLog()">🗑 Effacer</button>
   </div>
   <div class="card" style="padding:0;">
-    <div style="padding:12px 16px;border-bottom:1px solid var(--bg3);display:flex;gap:8px;flex-wrap:wrap;">
-      <select id="log-filter-user" class="form-sel" style="width:150px" onchange="rJournal()">
+    <div class="journal-filters">
+      <select id="log-filter-user" class="form-sel" onchange="rJournal()">
         <option value="">Tous les membres</option>
         <option value="Amani">👑 Amani</option>
         <option value="Narcisse">💰 Narcisse</option>
         <option value="Eliace">📦 Eliace</option>
         <option value="Annita">💸 Annita</option>
       </select>
-      <select id="log-filter-type" class="form-sel" style="width:150px" onchange="rJournal()">
+      <select id="log-filter-type" class="form-sel" onchange="rJournal()">
         <option value="">Toutes actions</option>
         <option value="CA">📊 CA</option>
         <option value="Créance">⚠️ Créances</option>
@@ -1292,7 +1532,7 @@ select.micro:focus{border-color:var(--green2);}
   </div>
 
   <!-- Bannière réinitialisation -->
-  <div style="display:flex;align-items:center;gap:14px;margin-bottom:22px;padding:14px 18px;background:rgba(230,57,70,0.07);border-radius:14px;border:1.5px solid rgba(230,57,70,0.25);">
+  <div class="reset-banner">
     <span style="font-size:1.6rem;flex-shrink:0;">🔄</span>
     <div style="flex:1;">
       <div style="font-weight:800;font-size:.85rem;color:#c0392b;margin-bottom:3px;">Réinitialiser les données</div>
@@ -1302,7 +1542,7 @@ select.micro:focus{border-color:var(--green2);}
   </div>
 
   <!-- Grille 2 colonnes -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;">
+  <div class="params-grid">
 
     <!-- Colonne gauche : PIN -->
     <div class="gcard">
@@ -1330,8 +1570,8 @@ select.micro:focus{border-color:var(--green2);}
           <div class="pin-user-info"><div class="pin-user-name">Annita</div><div class="pin-user-role">Finance</div></div>
           <input class="pin-input" id="pin-annita" type="text" maxlength="6" placeholder="Nouveau PIN" style="letter-spacing:2px;">
         </div>
-        <div style="margin-top:14px;display:flex;align-items:center;gap:10px;padding-top:12px;border-top:1px solid var(--border);">
-          <button class="btn btn-green" onclick="savePins()">💾 Enregistrer les PIN</button>
+        <div style="margin-top:14px;display:flex;align-items:center;gap:10px;padding-top:12px;border-top:1px solid var(--border);flex-wrap:wrap;">
+          <button class="btn btn-green" onclick="savePins()" style="flex:1;justify-content:center;">💾 Enregistrer les PIN</button>
           <span style="font-size:.63rem;color:var(--text3)">Laisser vide = PIN inchangé · Min. 4 chiffres</span>
         </div>
       </div>
@@ -1344,9 +1584,7 @@ select.micro:focus{border-color:var(--green2);}
           <div class="gcard-title"><span style="font-size:1rem;">👥</span> Gérer l'équipe</div>
         </div>
         <div class="gcard-body" style="padding:14px;">
-          <div id="equipe-list">
-            <!-- Rempli dynamiquement par rEquipe() -->
-          </div>
+          <div id="equipe-list"></div>
         </div>
       </div>
 
@@ -1383,6 +1621,18 @@ select.micro:focus{border-color:var(--green2);}
 
   </div>
 </div>
+
+</div><!-- /main -->
+
+<!-- ══ NAVBAR MOBILE ══ -->
+<div id="mobile-nav">
+  <div class="mn-items" id="mn-items">
+    <!-- Items générés dynamiquement selon le rôle -->
+  </div>
+</div>
+
+
+
 <!-- ══════ MODALS ══════ -->
 
 <!-- Modal CA -->
@@ -3336,9 +3586,9 @@ async function _pushLocalToSupabase() {
 
 const ROLE_PAGES = {
   manager:    ['dashboard','ca','creances','depenses','clients','crm','stock','journal','params','fiche','employes'],
-  commercial: ['dashboard','creances','clients','crm','fiche','employes'],
+  commercial: ['dashboard','creances','clients','crm','fiche'],
   stock:      ['dashboard','stock','employes'],
-  finance:    ['dashboard','ca','depenses','employes'],
+  finance:    ['dashboard','ca','depenses'],
 };
 const ROLE_ICO = { manager:'👑', commercial:'💰', stock:'📦', finance:'💸' };
 
@@ -3456,9 +3706,12 @@ function applyNav(){
   document.querySelectorAll('.ni').forEach(el=>{
     const oc=el.getAttribute('onclick')||'';
     const m=oc.match(/goTo\('([^']+)'\)/);
-    if(m) el.style.display=pages.includes(m[1])?'':'none';
+    const dpg=el.getAttribute('data-page');
+    const pg_name = m?m[1]:dpg;
+    if(pg_name) el.style.display=pages.includes(pg_name)?'':'none';
   });
   document.getElementById('nav-manager').style.display=pages.includes('journal')?'':'none';
+  document.getElementById('nav-rh').style.display=pages.includes('employes')?'':'none';
   const exp=document.querySelector('.sb-export-btns');
   if(exp) exp.style.display=isManager()?'':'none';
   goTo('dashboard');
@@ -3534,7 +3787,14 @@ function rEquipe(){
       <button class="btn btn-outline btn-sm" onclick="editMembre(${i})" style="padding:4px 8px;">✏️</button>
       <button class="btn btn-outline btn-sm" onclick="toggleMembre(${i})" style="padding:4px 8px;">${m.actif?'⏸':'▶'}</button>
     </div>
-  `).join('') + `<button class="btn btn-green btn-sm" style="width:100%;margin-top:8px;" onclick="openModal('modal-membre')">＋ Ajouter un membre</button>`;
+  `).join('') + `<button class="btn btn-green btn-sm" style="width:100%;margin-top:8px;" onclick="
+    document.getElementById('mb-nom').value='';
+    document.getElementById('mb-role').value='commercial';
+    document.getElementById('mb-pin').value='';
+    document.getElementById('mb-edit-idx').value='';
+    document.getElementById('modal-membre-title').textContent='➕ Nouveau membre';
+    openModal('modal-membre');
+  ">＋ Ajouter un membre</button>`;
 }
 
 function toggleMembre(i){
@@ -3565,7 +3825,7 @@ function saveMembre(){
   const idx = document.getElementById('mb-edit-idx')?.value;
   if(!nom){ toast('Nom requis',true); return; }
   const m = loadMembres();
-  if(idx !== '' && idx !== undefined && !isNaN(idx) && idx >= 0){
+  if(idx !== null && idx !== undefined && idx !== '' && idx !== 'null' && !isNaN(parseInt(idx)) && parseInt(idx) >= 0){
     // Modification
     m[parseInt(idx)].nom = nom;
     m[parseInt(idx)].role = role;
@@ -3617,13 +3877,7 @@ const _origRenderTitle=render;
 /* ══ RESPONSIVE JS ══ */
 
 /* ── Sidebar mobile toggle ── */
-function toggleSidebar(){
-  const sb = document.querySelector('.sidebar');
-  const ov = document.getElementById('sb-overlay');
-  const isOpen = sb.classList.contains('open');
-  if(isOpen){ closeSidebar(); }
-  else { sb.classList.add('open'); ov.classList.add('show'); }
-}
+/* toggleSidebar merged into unified version below */
 function closeSidebar(){
   document.querySelector('.sidebar').classList.remove('open');
   document.getElementById('sb-overlay').classList.remove('show');
@@ -3647,13 +3901,14 @@ const MOBILE_NAV_ITEMS = {
   crm:       { ico:'🎯', label:'CRM' },
   journal:   { ico:'📋', label:'Journal' },
   params:    { ico:'⚙️', label:'Réglages' },
+  employes:  { ico:'👷', label:'Employés' },
 };
 
 // Pages prioritaires par rôle (max 5 pour navbar mobile)
 const MOBILE_PRIORITY = {
-  manager:    ['dashboard','ca','creances','stock','journal'],
+  manager:    ['dashboard','ca','employes','stock','journal'],
   commercial: ['dashboard','creances','clients','crm'],
-  stock:      ['dashboard','stock'],
+  stock:      ['dashboard','stock','employes'],
   finance:    ['dashboard','ca','depenses'],
 };
 
@@ -3992,28 +4247,29 @@ function saveAvance(){
 }
 
 // ══ Patch openModal pour pré-remplir les selects EJ ══
-const _origOpenModal = openModal;
-function openModal(id, data=null){
-  _origOpenModal(id, data);
-  if(id==='modal-avance'){
-    const sel = document.getElementById('av-ej-sel');
-    if(sel){
-      sel.innerHTML = '<option value="">-- Sélectionner --</option>';
-      ldEj(KEJ.ej).filter(e=>e.actif!==false).forEach(e=>{ sel.innerHTML+=`<option value="${e.id}">${e.nom} (${e.site||'RMU'})</option>`; });
+(function(){
+  const _origOpenModal = window.openModal || openModal;
+  window.openModal = function(id, data=null){
+    _origOpenModal(id, data);
+    if(id==='modal-avance'){
+      const sel = document.getElementById('av-ej-sel');
+      if(sel){
+        sel.innerHTML = '<option value="">-- Sélectionner --</option>';
+        ldEj(KEJ.ej).filter(e=>e.actif!==false).forEach(e=>{ sel.innerHTML+=`<option value="${e.id}">${e.nom} (${e.site||'RMU'})</option>`; });
+      }
+      const avDate = document.getElementById('av-date');
+      if(avDate && !avDate.value) avDate.value = new Date().toISOString().slice(0,10);
     }
-    const avDate = document.getElementById('av-date');
-    if(avDate && !avDate.value) avDate.value = new Date().toISOString().slice(0,10);
-  }
-  if(id==='modal-ej'){
-    const ejDebut = document.getElementById('ej-debut');
-    if(ejDebut && !ejDebut.value) ejDebut.value = new Date().toISOString().slice(0,10);
-    ['ej-nom','ej-tache','ej-tel','ej-note'].forEach(fid=>{ const el=document.getElementById(fid); if(el)el.value=''; });
-    const tauxEl=document.getElementById('ej-taux'); if(tauxEl)tauxEl.value='3000';
-  }
-}
+    if(id==='modal-ej'){
+      const ejDebut = document.getElementById('ej-debut');
+      if(ejDebut) ejDebut.value = new Date().toISOString().slice(0,10);
+      ['ej-nom','ej-tache','ej-tel','ej-note'].forEach(fid=>{ const el=document.getElementById(fid); if(el)el.value=''; });
+      const tauxEl=document.getElementById('ej-taux'); if(tauxEl)tauxEl.value='3000';
+    }
+  };
+})();
 
 // Patch goTo to handle employes page
-const _origGoTo = goTo;
 /* Patch goTo pour la page Employés — s'intègre dans la chaîne window.goTo */
 (function(){
   const _prevGoTo = window.goTo;
@@ -4043,15 +4299,21 @@ function scrollMain(amount){
 function toggleSidebar(){
   const sb = document.querySelector('.sidebar, nav.sidebar');
   const main = document.querySelector('.main');
+  const ov = document.getElementById('sb-overlay');
   if(!sb) return;
-  sb.classList.toggle('collapsed');
-  sb.classList.toggle('open'); // for mobile
-  if(main) main.classList.toggle('collapsed');
-  const btn = document.getElementById('sb-collapse-btn');
-  if(btn) btn.textContent = sb.classList.contains('collapsed') ? '▶' : '◀';
-  localStorage.setItem('aj_sb_collapsed', sb.classList.contains('collapsed') ? '1' : '0');
-  const overlay = document.getElementById('sb-overlay');
-  if(overlay) overlay.classList.toggle('show', sb.classList.contains('open'));
+  if(window.innerWidth <= 700){
+    // Mobile: open/close slide
+    const isOpen = sb.classList.contains('open');
+    if(isOpen){ sb.classList.remove('open'); if(ov) ov.classList.remove('show'); }
+    else { sb.classList.add('open'); if(ov) ov.classList.add('show'); }
+  } else {
+    // Desktop: collapse/expand
+    sb.classList.toggle('collapsed');
+    if(main) main.classList.toggle('collapsed');
+    const btn = document.getElementById('sb-collapse-btn');
+    if(btn) btn.textContent = sb.classList.contains('collapsed') ? '▶' : '◀';
+    localStorage.setItem('aj_sb_collapsed', sb.classList.contains('collapsed') ? '1' : '0');
+  }
 }
 // Restaurer état sidebar
 (function(){
@@ -4075,6 +4337,25 @@ document.addEventListener('DOMContentLoaded', function(){
   // Pre-render equipe section
   setTimeout(rEquipe, 100);
 });
+</script>
+
+
+<script>
+/* ── Observer: render params quand la page devient active ── */
+(function(){
+  const paramsPage = document.getElementById('page-params');
+  if(!paramsPage) return;
+  const obs = new MutationObserver(function(mutations){
+    mutations.forEach(function(m){
+      if(m.type==='attributes' && m.attributeName==='class'){
+        if(paramsPage.classList.contains('active')){
+          setTimeout(function(){ if(typeof rEquipe==='function') rEquipe(); }, 50);
+        }
+      }
+    });
+  });
+  obs.observe(paramsPage, {attributes: true});
+})();
 </script>
 
 </body>
