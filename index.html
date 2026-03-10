@@ -1757,7 +1757,7 @@ select.micro:focus{border-color:var(--green2);}
       <div class="frow"><div class="fld"><label>Date d'embauche</label><input type="date" id="ej-debut"></div><div class="fld"><label>Site de travail</label><select id="ej-site"><option value="RMU">RMU (Attinguie PK30)</option><option value="Bingerville">Bingerville</option><option value="Autre">Autre</option></select></div></div>
       <div class="frow full"><div class="fld"><label>Notes</label><input type="text" id="ej-note" placeholder="Observation..."></div></div>
     </div>
-    <div class="modal-foot"><button class="btn btn-outline" onclick="closeModal('modal-ej')">Annuler</button><button class="btn btn-green" onclick="saveNewEj()">✅ Enregistrer</button></div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="closeModal('modal-ej')">Annuler</button><button class="btn btn-green" id="ej-save-btn" onclick="saveEjDispatch()">✅ Enregistrer</button></div>
   </div>
 </div>
 
@@ -2401,7 +2401,18 @@ function openModal(id,data=null){
   if(id==='modal-stmvt'){td('st-date');fillStSelect();}
   if(data)fillM(id,data);
 }
-function closeModal(id){document.getElementById(id).classList.remove('open');EID=null;}
+function closeModal(id){
+  const el=document.getElementById(id);
+  if(el){ el.classList.remove('open'); delete el.dataset.editId; }
+  EID=null;
+  // Remettre le titre/bouton du modal-ej en mode création
+  if(id==='modal-ej'){
+    const t=document.querySelector('#modal-ej .modal-title');
+    if(t) t.textContent='👷 Nouvel Employé Journalier';
+    const b=document.getElementById('ej-save-btn');
+    if(b) b.textContent='✅ Enregistrer';
+  }
+}
 function td(id){document.getElementById(id).value=new Date().toISOString().slice(0,10);}
 function smois(id){document.getElementById(id).value=MOIS[new Date().getMonth()];}
 function fillStSelect(){
@@ -2704,13 +2715,36 @@ function rDashStock(){
   const lastMvt=mv.sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8);
 
   document.getElementById('dash-content').innerHTML=`
-  <div class="dash-hello">📦 Bonjour Eliace — État du stock</div>
+  <div class="dash-hello">📦 Bonjour Eliace — État du stock & Équipe</div>
   <div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">
     <div class="kcard"><span class="kcard-icon">📦</span><div class="kcard-label">Références</div><div class="kcard-value">${st.length}</div><div class="kcard-sub">articles gérés</div></div>
     <div class="kcard red" onclick="goTo('stock')" style="cursor:pointer"><span class="kcard-icon">⛔</span><div class="kcard-label">Ruptures</div><div class="kcard-value red">${ruptures.length}</div><div class="kcard-sub">stock = 0</div></div>
     <div class="kcard amber" onclick="goTo('stock')" style="cursor:pointer"><span class="kcard-icon">🔴</span><div class="kcard-label">Critiques</div><div class="kcard-value amber">${critiques.length}</div><div class="kcard-sub">sous le seuil</div></div>
     <div class="kcard" style="border-color:var(--green)"><span class="kcard-icon">🟢</span><div class="kcard-label">Stocks OK</div><div class="kcard-value green">${ok.length}</div><div class="kcard-sub">au-dessus seuil</div></div>
   </div>
+
+  <!-- Carte Pointage Employés Journaliers -->
+  <div class="card" style="margin-top:18px;border-left:3px solid var(--blue);cursor:pointer;" onclick="goTo('employes')">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>👷 Pointage Employés Journaliers</span>
+      <button class="btn btn-green btn-sm" onclick="event.stopPropagation();goTo('employes')">📋 Faire le pointage →</button>
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;" id="dash-ej-resume">
+      <div style="flex:1;min-width:120px;background:var(--bg2);border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;color:var(--blue);" id="dash-ej-total">—</div>
+        <div style="font-size:.65rem;color:var(--text3);margin-top:3px;">Employés actifs</div>
+      </div>
+      <div style="flex:1;min-width:120px;background:var(--green-s);border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;color:var(--green2);" id="dash-ej-presents">—</div>
+        <div style="font-size:.65rem;color:var(--text3);margin-top:3px;">Présents aujourd'hui</div>
+      </div>
+      <div style="flex:1;min-width:120px;background:var(--amber-s);border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;color:var(--amber);" id="dash-ej-absents">—</div>
+        <div style="font-size:.65rem;color:var(--text3);margin-top:3px;">Absents / Non pointés</div>
+      </div>
+    </div>
+  </div>
+
   ${ruptures.length+critiques.length>0?`
   <div class="card" style="margin-top:18px;border-left:3px solid var(--red)">
     <div class="card-title">🚨 Articles à réapprovisionner</div>
@@ -2739,6 +2773,17 @@ function rDashStock(){
     <td class="num">${m.qty} ${m.unite||''}</td>
     <td style="font-size:.68rem;color:var(--text3)">${m.obs||'—'}</td>
   </tr>`).join('') || '<tr><td colspan="5"><div class="empty">Aucun mouvement enregistré</div></td></tr>';
+
+  // Calcul pointage du jour
+  const ejsActifs = ldEj(KEJ.ej).filter(e=>e.actif!==false);
+  const today = new Date().toISOString().slice(0,10);
+  const pts = ldEj(KEJ.pt);
+  const ptAujourd = pts.filter(p=>p.date===today);
+  const presents = ptAujourd.filter(p=>p.statut==='P'||p.statut==='DH').length;
+  const absents = ejsActifs.length - presents;
+  if(document.getElementById('dash-ej-total'))   document.getElementById('dash-ej-total').textContent   = ejsActifs.length;
+  if(document.getElementById('dash-ej-presents'))document.getElementById('dash-ej-presents').textContent = presents;
+  if(document.getElementById('dash-ej-absents')) document.getElementById('dash-ej-absents').textContent  = absents < 0 ? 0 : absents;
 }
 
 /* ══════════════════════════════════════════
@@ -3980,6 +4025,20 @@ function rEJ(){
   initEJ();
   rEjKPIs();
   ejTab('pointage', document.getElementById('ejt-pointage'));
+  // Délégation d'événements pour les boutons de la liste employés (data-action)
+  // Délégation d'événements sur le tbody (une seule fois sur le body pour éviter doublons)
+  if(!window._ejBodyDelegated){
+    window._ejBodyDelegated = true;
+    document.body.addEventListener('click', function(ev){
+      const btn = ev.target.closest('.ej-btn');
+      if(!btn) return;
+      const action = btn.dataset.action;
+      const id = btn.dataset.id;
+      if(action==='edit')    editEj(id);
+      if(action==='toggle')  toggleEjActif(id);
+      if(action==='del')     delEj(id);
+    });
+  }
 }
 
 function rEjKPIs(){
@@ -4178,10 +4237,61 @@ function rEjListe(){
     <td class="muted">${e.debut?fdt(e.debut):'—'}</td>
     <td>${e.actif!==false?'<span class="tag tag-green">Actif</span>':'<span class="tag tag-muted">Inactif</span>'}</td>
     <td style="display:flex;gap:4px;">
-      <button class="btn btn-outline btn-sm btn-icon" onclick="toggleEjActif('${e.id}')" title="${e.actif!==false?'Désactiver':'Activer'}">${e.actif!==false?'⏸':'▶'}</button>
-      <button class="btn btn-red btn-sm btn-icon" onclick="delEj('${e.id}')">🗑</button>
+      <button class="btn btn-outline btn-sm btn-icon ej-btn" data-action="edit" data-id="${e.id}" title="Modifier">✏️</button>
+      <button class="btn btn-outline btn-sm btn-icon ej-btn" data-action="toggle" data-id="${e.id}" title="${e.actif!==false?'Désactiver':'Activer'}">${e.actif!==false?'⏸':'▶'}</button>
+      <button class="btn btn-red btn-sm btn-icon ej-btn" data-action="del" data-id="${e.id}">🗑</button>
     </td>
   </tr>`).join('');
+}
+
+function editEj(id){
+  const ejs = ldEj(KEJ.ej);
+  const e = ejs.find(x=>x.id===id);
+  if(!e){ toast('Employé introuvable',true); return; }
+  document.getElementById('ej-nom').value   = e.nom||'';
+  document.getElementById('ej-taux').value  = e.taux||3000;
+  document.getElementById('ej-tache').value = e.tache||'';
+  document.getElementById('ej-tel').value   = e.tel||'';
+  document.getElementById('ej-debut').value = e.debut||new Date().toISOString().slice(0,10);
+  document.getElementById('ej-site').value  = e.site||'RMU';
+  document.getElementById('ej-note').value  = e.note||'';
+  document.getElementById('modal-ej').dataset.editId = id;
+  document.querySelector('#modal-ej .modal-title').textContent = '✏️ Modifier Employé';
+  const saveBtn = document.getElementById('ej-save-btn');
+  if(saveBtn) saveBtn.textContent = '💾 Enregistrer modifications';
+  document.getElementById('modal-ej').classList.add('open');
+}
+
+function saveEjDispatch(){
+  const editId = document.getElementById('modal-ej').dataset.editId;
+  if(editId){ saveEditEj(editId); } else { saveNewEj(); }
+}
+
+function saveEditEj(id){
+  const nom = document.getElementById('ej-nom')?.value.trim();
+  if(!nom){ toast('Nom requis',true); return; }
+  const ejs = ldEj(KEJ.ej);
+  const idx = ejs.findIndex(x=>x.id===id);
+  if(idx===-1){ toast('Employé introuvable',true); return; }
+  ejs[idx] = {
+    ...ejs[idx],
+    nom,
+    taux:  parseFloat(document.getElementById('ej-taux')?.value)||3000,
+    tache: document.getElementById('ej-tache')?.value.trim()||'',
+    tel:   document.getElementById('ej-tel')?.value.trim()||'',
+    debut: document.getElementById('ej-debut')?.value||ejs[idx].debut,
+    site:  document.getElementById('ej-site')?.value||'RMU',
+    note:  document.getElementById('ej-note')?.value.trim()||'',
+  };
+  svEj(KEJ.ej, ejs);
+  _SB.from('employes').upsert(ejs[idx], {onConflict:'id'}).then(({error})=>{if(error)console.warn('EJ edit:',error.message);});
+  delete document.getElementById('modal-ej').dataset.editId;
+  document.querySelector('#modal-ej .modal-title').textContent = '👷 Nouvel Employé Journalier';
+  const saveBtn = document.getElementById('ej-save-btn');
+  if(saveBtn) saveBtn.textContent = '✅ Enregistrer';
+  closeModal('modal-ej');
+  toast('Employé modifié ✅');
+  rEjListe(); rEjKPIs();
 }
 
 function saveNewEj(){
