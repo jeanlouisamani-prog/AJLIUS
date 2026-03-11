@@ -2495,8 +2495,9 @@ function saveStMvt(){
   if(i<0)return;
   if(type==='SORTIE'&&st[i].qty<qty){toast('⚠️ Stock insuffisant',true);return;}
   type==='ENTREE'?st[i].qty+=qty:st[i].qty-=qty;
-  sv(K.st,st);
-  const mv=ld(K.mv);mv.unshift({id:uid(),date,produit:st[i].nom,cat:st[i].cat,type,qty,unite:st[i].unite,obs});sv(K.mv,mv);
+  sv(K.st,st); _sbUps(K.st, st[i]);
+  const mvRow={id:uid(),date,produit:st[i].nom,cat:st[i].cat,type,qty,unite:st[i].unite,obs};
+  const mv=ld(K.mv);mv.unshift(mvRow);sv(K.mv,mv); _sbUps(K.mv, mvRow);
   closeModal('modal-stmvt');toast(`${type==='ENTREE'?'📥 Entrée':'📤 Sortie'} enregistrée ✓`);rSt();
   logActivity('Stock',`${type==='ENTREE'?'📥':'📤'} ${type} ${qty} × ${st[i].nom}`);
 }
@@ -3373,8 +3374,9 @@ function qMvt(sid,type){
     const st2=ld(K.st),j=st2.findIndex(x=>x.id===sid);if(j<0)return;
     if(type==='SORTIE'&&st2[j].qty<qty){toast('⚠️ Stock insuffisant',true);return;}
     type==='ENTREE'?st2[j].qty+=qty:st2[j].qty-=qty;
-    sv(K.st,st2);
-    const mv=ld(K.mv);mv.unshift({id:uid(),date:new Date().toISOString().slice(0,10),produit:st2[j].nom,cat:st2[j].cat,type,qty,unite:st2[j].unite,obs:'Saisie rapide'});sv(K.mv,mv);
+    sv(K.st,st2); _sbUps(K.st, st2[j]);
+    const qmvRow={id:uid(),date:new Date().toISOString().slice(0,10),produit:st2[j].nom,cat:st2[j].cat,type,qty,unite:st2[j].unite,obs:'Saisie rapide'};
+    const mv=ld(K.mv);mv.unshift(qmvRow);sv(K.mv,mv); _sbUps(K.mv, qmvRow);
     closeModal('modal-qstock');toast(`${type==='ENTREE'?'📥':'📤'} ${st2[j].nom}`);rSt();
   };
   document.getElementById('modal-qstock').classList.add('open');
