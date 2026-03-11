@@ -2420,7 +2420,7 @@ function openModal(id,data=null){
   EID=data?data.id:null;
   document.getElementById(id).classList.add('open');
   if(id==='modal-ca'){td('ca-date');smois('ca-mois');selectPay('non');}
-  if(id==='modal-depense')td('dep-date');
+  if(id==='modal-depense' && !data)td('dep-date');
   if(id==='modal-creance')td('cr-date');
   if(id==='modal-stmvt'){td('st-date');fillStSelect();}
   if(data)fillM(id,data);
@@ -2439,7 +2439,7 @@ function fillM(id,d){
   const MAP={
     'modal-ca':[['ca-date','date'],['ca-client','client'],['ca-produit','produit'],['ca-montant','montant'],['ca-mois','mois'],['ca-annee','annee'],['ca-localite','localite'],['ca-note','note']],
     'modal-creance':[['cr-client','client'],['cr-montant','montant'],['cr-statut','statut'],['cr-date','date'],['cr-note','note']],
-    'modal-depense':[['dep-date','date'],['dep-benef','benef'],['dep-libelle','libelle'],['dep-cat','cat'],['dep-montant','montant'],['dep-comment','comment']],
+    'modal-depense':[['dep-date','date'],['dep-benef','benef'],['dep-libelle','libelle'],['dep-cat','cat'],['dep-montant','montant'],['dep-comment','comment'],['dep-comment','note']],
     'modal-prospect':[['pr-nom','nom'],['pr-loc','loc'],['pr-wa','wa'],['pr-produit','produit'],['pr-interet','interet'],['pr-budget','budget'],['pr-contact','contact'],['pr-statut','statut'],['pr-notes','notes']],
     'modal-client':[['cl-nom','nom'],['cl-loc','loc'],['cl-tel','tel'],['cl-wa','wa'],['cl-email','email'],['cl-statut_client','statut_client'],['cl-secteur','secteur'],['cl-encours_dep','encours_dep'],['cl-activite','activite'],['cl-notes','notes']],
   };
@@ -2495,9 +2495,22 @@ function saveCreance(){
   logActivity('Créance','⚠️ Créance '+d.client+' — '+fmt(d.montant)+' FCFA');
 }
 function saveDepense(){
-  const d={id:EID||uid(),date:gv('dep-date'),benef:gv('dep-benef').trim(),libelle:gv('dep-libelle').trim(),cat:gv('dep-cat'),montant:gn('dep-montant'),comment:gv('dep-comment').trim()};
-  if(!d.benef||!d.libelle||!d.montant){toast('Champs obligatoires manquants',true);return;}
-  ups(K.dep,d);closeModal('modal-depense');toast('Dépense enregistrée ✓');rDep();rDash();
+  const d={
+    id:     EID||uid(),
+    date:   gv('dep-date'),
+    benef:  gv('dep-benef').trim(),
+    libelle:gv('dep-libelle').trim(),
+    cat:    gv('dep-cat'),
+    montant:gn('dep-montant'),
+    comment:gv('dep-comment').trim()
+  };
+  if(!d.libelle||!d.montant){toast('Libellé et montant obligatoires',true);return;}
+  // Normaliser : accepter benef vide, cat ou categorie
+  if(!d.benef) d.benef = '—';
+  ups(K.dep,d);
+  closeModal('modal-depense');
+  toast('Dépense enregistrée ✓');
+  rDep();rDash();
   logActivity('Dépense','💸 '+d.libelle+' · '+d.benef+' — '+fmt(d.montant)+' FCFA');
 }
 function saveProspect(){
@@ -2984,25 +2997,41 @@ function rDep(){
     </div>`).join('');
   renderDepTable();
 }
+window._depIdx = [];
 function renderDepTable(){
   const mf=gv('dep-mois'),q=(gv('dep-search')||'').toLowerCase();
   let arr=ld(K.dep);
   if(mf)arr=arr.filter(x=>x.date&&x.date.startsWith(mf));
-  if(q)arr=arr.filter(x=>(x.benef+x.libelle+x.cat).toLowerCase().includes(q));
+  if(q)arr=arr.filter(x=>((x.benef||'')+(x.libelle||'')+(x.cat||x.categorie||'')).toLowerCase().includes(q));
   arr.sort((a,b)=>b.date.localeCompare(a.date));
-  document.getElementById('dep-tbody').innerHTML=arr.map(x=>`
+  window._depIdx = arr; // stocker le tableau filtré pour accès par index
+  document.getElementById('dep-tbody').innerHTML=arr.map((x,i)=>`
     <tr>
       <td class="muted" style="font-family:'JetBrains Mono',monospace;font-size:.7rem">${fdt(x.date)}</td>
       <td><strong>${x.benef}</strong></td>
       <td style="color:var(--text2)">${x.libelle}</td>
-      <td><span class="tag" style="background:${CATCOL[x.cat]||'#aaa'}18;color:${CATCOL[x.cat]||'#555'};border-color:${CATCOL[x.cat]||'#aaa'}30">${x.cat}</span></td>
+      <td><span class="tag" style="background:${CATCOL[x.cat||x.categorie]||'#aaa'}18;color:${CATCOL[x.cat||x.categorie]||'#555'};border-color:${CATCOL[x.cat||x.categorie]||'#aaa'}30">${x.cat||x.categorie||'—'}</span></td>
       <td class="num">${fmt(x.montant)}</td>
       <td style="font-size:.68rem;color:var(--text3)">${x.comment||'—'}</td>
       <td><div style="display:flex;gap:4px">
-        <button class="btn btn-outline btn-sm btn-icon" onclick='openModal("modal-depense",${JSON.stringify(x)})'>✏️</button>
-        <button class="btn btn-red btn-sm btn-icon" onclick='delRow("${K.dep}","${x.id}")'>🗑</button>
+        <button class="btn btn-outline btn-sm btn-icon" onclick="editDep(${i})" title="Modifier">✏️</button>
+        <button class="btn btn-red btn-sm btn-icon" onclick="delDep(${i})">🗑</button>
       </div></td>
     </tr>`).join('')||`<tr><td colspan="7"><div class="empty"><div class="empty-ico">📭</div>Aucune dépense</div></td></tr>`;
+}
+function editDep(i){
+  const x = window._depIdx[i];
+  if(!x){ toast('Dépense introuvable',true); return; }
+  EID = x.id;
+  // Normaliser cat/categorie avant fillM
+  const xn = {...x, cat: x.cat||x.categorie||'', benef: x.benef||'—', comment: x.comment||x.note||''};
+  document.getElementById('modal-depense').classList.add('open');
+  fillM('modal-depense', xn);
+}
+function delDep(i){
+  const x = window._depIdx[i];
+  if(!x){ toast('Dépense introuvable',true); return; }
+  delRow(K.dep, x.id);
 }
 
 /* ══ RENDER CLIENTS ══ */
@@ -3512,7 +3541,10 @@ const _TBL = {
 function _sbUps(lsKey, row) {
   const tbl = _TBL[lsKey]; if(!tbl) return;
   _SB.from(tbl).upsert(row, {onConflict:'id'}).then(({error}) => {
-    if(error) console.warn('Supabase sync:', tbl, error.message);
+    if(error){
+      console.warn('Supabase sync:', tbl, error.message);
+      toast('⚠️ Sync erreur: '+error.message, true);
+    }
   });
 }
 
