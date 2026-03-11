@@ -1421,6 +1421,7 @@ select.micro:focus{border-color:var(--green2);}
   <div style="display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap;" id="ej-tabs">
     <button class="btn btn-green btn-sm" id="ejt-pointage" onclick="ejTab('pointage',this)">📋 Pointage</button>
     <button class="btn btn-outline btn-sm" id="ejt-avances" onclick="ejTab('avances',this)">💸 Avances</button>
+    <button class="btn btn-outline btn-sm" id="ejt-semaine" onclick="ejTab('semaine',this)">📅 Récap semaine</button>
     <button class="btn btn-outline btn-sm" id="ejt-recap" onclick="ejTab('recap',this)">📊 Récap mensuel</button>
     <button class="btn btn-outline btn-sm" id="ejt-liste" onclick="ejTab('liste',this)">👥 Employés</button>
   </div>
@@ -1451,6 +1452,24 @@ select.micro:focus{border-color:var(--green2);}
       <div class="scroll-x">
         <table class="tbl"><thead><tr><th>Date</th><th>Employé</th><th class="num">Montant (FCFA)</th><th>Motif</th><th></th></tr></thead>
         <tbody id="ej-av-tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Récap semaine -->
+  <div id="ej-panel-semaine" style="display:none;">
+    <div class="gcard">
+      <div class="gcard-head">
+        <div class="gcard-title"><div class="dot blue"></div>Salaires dus — Semaine</div>
+        <input type="date" id="ej-semaine-date" class="micro" style="font-size:.72rem;padding:6px 10px;" onchange="rEjRecapSemaine()">
+      </div>
+      <div id="ej-semaine-kpis" style="display:flex;gap:10px;flex-wrap:wrap;padding:12px 0;"></div>
+      <div class="scroll-x">
+        <table class="tbl"><thead><tr>
+          <th>Employé</th><th>Spécialité</th><th class="num">Jours</th>
+          <th class="num">Salaire brut</th><th class="num">Avances</th>
+          <th class="num">Reste à payer</th><th>Statut</th>
+        </tr></thead><tbody id="ej-semaine-tbody"></tbody></table>
       </div>
     </div>
   </div>
@@ -4064,17 +4083,34 @@ function rEjKPIs(){
   });
   const restant = Math.max(0, salaireTotal - avancesTotal);
 
+  // Calcul semaine courante (lundi → dimanche)
+  const monday = new Date(now); monday.setDate(now.getDate() - ((now.getDay()+6)%7)); monday.setHours(0,0,0,0);
+  const sunday = new Date(monday); sunday.setDate(monday.getDate()+6); sunday.setHours(23,59,59,999);
+  let joursSem=0, salaireSem=0, avancesSem=0;
+  Object.entries(pts).forEach(([date,arr])=>{
+    const d = new Date(date);
+    if(d>=monday && d<=sunday){
+      arr.forEach(p=>{if(p.present){joursSem++;salaireSem+=p.taux||0;}});
+    }
+  });
+  avs.forEach(a=>{
+    const d=new Date(a.date);
+    if(d>=monday && d<=sunday) avancesSem+=a.montant||0;
+  });
+  const restantSem = Math.max(0, salaireSem - avancesSem);
+
   document.getElementById('ej-kpis').innerHTML = `
     <div class="kcard blue"><span class="kcard-icon">👷</span><div class="kcard-label">Employés actifs</div><div class="kcard-value blue">${actifs}</div><div class="kcard-sub">Manœuvres enregistrés</div></div>
     <div class="kcard"><span class="kcard-icon">📅</span><div class="kcard-label">Jours travaillés (mois)</div><div class="kcard-value">${joursTotal}</div><div class="kcard-sub">Présences cumulées</div></div>
+    <div class="kcard amber" onclick="ejTab('semaine',document.getElementById('ejt-semaine'))" style="cursor:pointer"><span class="kcard-icon">📅</span><div class="kcard-label">Salaires dus (semaine)</div><div class="kcard-value amber">${fmt(salaireSem)}</div><div class="kcard-sub">FCFA · ${joursSem} j · cliquer →</div></div>
     <div class="kcard amber"><span class="kcard-icon">💼</span><div class="kcard-label">Salaires dus (mois)</div><div class="kcard-value amber">${fmt(salaireTotal)}</div><div class="kcard-sub">FCFA brut</div></div>
-    <div class="kcard red"><span class="kcard-icon">⚡</span><div class="kcard-label">Reste à payer</div><div class="kcard-value red">${fmt(restant)}</div><div class="kcard-sub">Après avances</div></div>
+    <div class="kcard red"><span class="kcard-icon">⚡</span><div class="kcard-label">Reste à payer</div><div class="kcard-value red">${fmt(restant)}</div><div class="kcard-sub">Après avances (mois)</div></div>
   `;
   document.getElementById('nb-ej').textContent = actifs;
 }
 
 function ejTab(tab, btn){
-  ['pointage','avances','recap','liste'].forEach(t=>{
+  ['pointage','avances','semaine','recap','liste'].forEach(t=>{
     document.getElementById('ej-panel-'+t).style.display='none';
     const b = document.getElementById('ejt-'+t);
     if(b){ b.className='btn btn-outline btn-sm'; }
@@ -4083,6 +4119,11 @@ function ejTab(tab, btn){
   if(btn){ btn.className='btn btn-green btn-sm'; }
   if(tab==='pointage') rEjPointage();
   if(tab==='avances') rEjAvances();
+  if(tab==='semaine'){
+    const ds = document.getElementById('ej-semaine-date');
+    if(ds && !ds.value) ds.value = new Date().toISOString().slice(0,10);
+    rEjRecapSemaine();
+  }
   if(tab==='recap') rEjRecap();
   if(tab==='liste') rEjListe();
 }
@@ -4180,6 +4221,80 @@ function delAvance(id){
     closeConf(); rEjAvances(); rEjKPIs();
     toast('Avance supprimée');
   };
+}
+
+function rEjRecapSemaine(){
+  // Calculer lundi et dimanche de la semaine sélectionnée
+  const dateInput = document.getElementById('ej-semaine-date');
+  const ref = dateInput?.value ? new Date(dateInput.value) : new Date();
+  const monday = new Date(ref); monday.setDate(ref.getDate() - ((ref.getDay()+6)%7)); monday.setHours(0,0,0,0);
+  const sunday = new Date(monday); sunday.setDate(monday.getDate()+6); sunday.setHours(23,59,59,999);
+
+  const fmt2 = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
+  const label = `${fmt2(monday)} – ${fmt2(sunday)}`;
+
+  const ejs = ldEj(KEJ.ej);
+  const pts = JSON.parse(localStorage.getItem(KEJ.pt)||'{}');
+  const avs = ldEj(KEJ.av);
+  const tb = document.getElementById('ej-semaine-tbody');
+  if(!tb) return;
+  if(!ejs.length){ tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text3);">Aucun employé enregistré.</td></tr>'; return; }
+
+  let rows='', totJours=0, totSal=0, totAv=0;
+  ejs.forEach(e=>{
+    let jours=0, sal=0, taches=new Set();
+    Object.entries(pts).forEach(([date,arr])=>{
+      const d=new Date(date);
+      if(d>=monday && d<=sunday){
+        const p=arr.find(x=>x.ejId===e.id);
+        if(p&&p.present){jours++;sal+=p.taux||0;if(p.tache)taches.add(p.tache);}
+      }
+    });
+    const av = avs.filter(a=>{
+      const d=new Date(a.date);
+      return a.ejId===e.id && d>=monday && d<=sunday;
+    }).reduce((s,a)=>s+a.montant,0);
+    const reste = Math.max(0,sal-av);
+    totJours+=jours; totSal+=sal; totAv+=av;
+    if(jours===0) return; // n'afficher que ceux qui ont travaillé cette semaine
+    const statut = reste===0?'<span class="tag tag-green">✅ Soldé</span>':'<span class="tag tag-amber">💰 À payer</span>';
+    rows+=`<tr>
+      <td><strong>${e.nom}</strong><br><small class="muted">${e.site||'RMU'}</small></td>
+      <td class="muted">${[...taches].join(', ')||e.tache||'—'}</td>
+      <td class="num" style="font-weight:700;">${jours}j</td>
+      <td class="num" style="color:var(--blue);font-weight:700;">${fmt(sal)}</td>
+      <td class="num" style="color:var(--amber);">${av>0?fmt(av):'—'}</td>
+      <td class="num" style="color:${reste>0?'var(--red)':'var(--green2)'};font-weight:700;">${fmt(reste)}</td>
+      <td>${statut}</td>
+    </tr>`;
+  });
+  if(!rows) rows='<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text3);">Aucune présence enregistrée cette semaine.</td></tr>';
+  else rows+=`<tr style="background:var(--panel2);font-weight:800;border-top:2px solid var(--border2);">
+    <td colspan="2" style="font-weight:800;color:var(--text);">TOTAL — ${label}</td>
+    <td class="num">${totJours}j</td>
+    <td class="num" style="color:var(--blue);">${fmt(totSal)}</td>
+    <td class="num" style="color:var(--amber);">${fmt(totAv)}</td>
+    <td class="num" style="color:var(--red);font-size:1rem;">${fmt(Math.max(0,totSal-totAv))}</td>
+    <td></td>
+  </tr>`;
+  tb.innerHTML = rows;
+
+  // Mini KPIs semaine
+  const kEl = document.getElementById('ej-semaine-kpis');
+  if(kEl) kEl.innerHTML = `
+    <div style="flex:1;min-width:130px;background:var(--bg2);border-radius:10px;padding:12px;text-align:center;">
+      <div style="font-size:1.3rem;font-weight:800;color:var(--blue);">${totJours}</div>
+      <div style="font-size:.65rem;color:var(--text3);margin-top:3px;">Jours travaillés</div>
+    </div>
+    <div style="flex:1;min-width:130px;background:var(--amber-s,#fff3cd);border-radius:10px;padding:12px;text-align:center;">
+      <div style="font-size:1.3rem;font-weight:800;color:var(--amber);">${fmt(totSal)}</div>
+      <div style="font-size:.65rem;color:var(--text3);margin-top:3px;">Salaires bruts</div>
+    </div>
+    <div style="flex:1;min-width:130px;background:var(--red-s,#fce8e8);border-radius:10px;padding:12px;text-align:center;">
+      <div style="font-size:1.3rem;font-weight:800;color:var(--red);">${fmt(Math.max(0,totSal-totAv))}</div>
+      <div style="font-size:.65rem;color:var(--text3);margin-top:3px;">Reste à payer</div>
+    </div>
+  `;
 }
 
 function rEjRecap(){
