@@ -2494,6 +2494,15 @@ function saveCreance(){
   ups(K.cr,d);closeModal('modal-creance');toast('Créance enregistrée ✓');rCr();rDash();badges();
   logActivity('Créance','⚠️ Créance '+d.client+' — '+fmt(d.montant)+' FCFA');
 }
+
+function checkDepCols(){
+  _SB.from('depenses').select('*').limit(1).then(({data,error})=>{
+    if(error){ alert('Erreur: '+error.message); return; }
+    if(!data||!data.length){ alert('Table depenses vide'); return; }
+    const cols = Object.keys(data[0]);
+    alert('Colonnes Supabase depenses:\n\n' + cols.join('\n'));
+  });
+}
 function saveDepense(){
   try {
     const catVal = gv('dep-cat');
@@ -3562,11 +3571,11 @@ function _sbUps(lsKey, row) {
     r = {
       id:        row.id,
       date:      row.date,
-      libelle:   row.libelle,
+      libelle:   row.libelle   || '',
       categorie: row.categorie || row.cat || '',
-      montant:   row.montant,
-      benef:     row.benef || null,
-      comment:   row.comment || null
+      montant:   row.montant   || 0,
+      benef:     row.benef     || null,
+      comment:   row.comment   || null
     };
   }
   _SB.from(tbl).upsert(r, {onConflict:'id'}).then(({error}) => {
