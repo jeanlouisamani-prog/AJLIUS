@@ -2495,23 +2495,30 @@ function saveCreance(){
   logActivity('Créance','⚠️ Créance '+d.client+' — '+fmt(d.montant)+' FCFA');
 }
 function saveDepense(){
-  const d={
-    id:     EID||uid(),
-    date:   gv('dep-date'),
-    benef:  gv('dep-benef').trim(),
-    libelle:gv('dep-libelle').trim(),
-    cat:    gv('dep-cat'),
-    montant:gn('dep-montant'),
-    comment:gv('dep-comment').trim()
-  };
-  if(!d.libelle||!d.montant){toast('Libellé et montant obligatoires',true);return;}
-  // Normaliser : accepter benef vide, cat ou categorie
-  if(!d.benef) d.benef = '—';
-  ups(K.dep,d);
-  closeModal('modal-depense');
-  toast('Dépense enregistrée ✓');
-  rDep();rDash();
-  logActivity('Dépense','💸 '+d.libelle+' · '+d.benef+' — '+fmt(d.montant)+' FCFA');
+  try {
+    const catVal = gv('dep-cat');
+    const d={
+      id:        EID||uid(),
+      date:      gv('dep-date'),
+      benef:     gv('dep-benef').trim()||'—',
+      libelle:   gv('dep-libelle').trim(),
+      cat:       catVal,
+      categorie: catVal,
+      montant:   gn('dep-montant'),
+      comment:   gv('dep-comment').trim()
+    };
+    if(!d.libelle){ toast('Libellé obligatoire',true); return; }
+    if(!d.montant){ toast('Montant obligatoire',true); return; }
+    if(!d.date){    toast('Date obligatoire',true); return; }
+    ups(K.dep,d);
+    closeModal('modal-depense');
+    toast('Dépense enregistrée ✓');
+    rDep(); rDash();
+    logActivity('Dépense','💸 '+d.libelle+' · '+d.benef+' — '+fmt(d.montant)+' FCFA');
+  } catch(err) {
+    toast('Erreur: '+err.message, true);
+    console.error('saveDepense error:', err);
+  }
 }
 function saveProspect(){
   const d={id:EID||uid(),nom:gv('pr-nom').trim(),loc:gv('pr-loc').trim(),wa:gv('pr-wa').trim(),produit:gv('pr-produit'),interet:gv('pr-interet'),budget:gn('pr-budget'),contact:gv('pr-contact'),statut:gv('pr-statut'),notes:gv('pr-notes').trim()};
@@ -2563,7 +2570,16 @@ function toast(msg,err=false){
   const t=document.getElementById('toast');
   document.getElementById('t-msg').textContent=msg;
   t.classList.toggle('err',err);t.classList.add('show');
-  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2800);
+  clearTimeout(t._t);
+  if(err){
+    // Erreur : reste affiché jusqu'au clic
+    t.onclick = ()=>{ t.classList.remove('show'); t.onclick=null; };
+    t.style.cursor='pointer';
+    t.title='Cliquer pour fermer';
+  } else {
+    t.onclick=null; t.style.cursor='';
+    t._t=setTimeout(()=>t.classList.remove('show'),2800);
+  }
 }
 
 /* ══ BADGES ══ */
@@ -3540,7 +3556,20 @@ const _TBL = {
 /* Sauvegarde un enregistrement dans Supabase (background) */
 function _sbUps(lsKey, row) {
   const tbl = _TBL[lsKey]; if(!tbl) return;
-  _SB.from(tbl).upsert(row, {onConflict:'id'}).then(({error}) => {
+  // Mapper les champs locaux vers les colonnes Supabase
+  let r = {...row};
+  if(tbl === 'depenses'){
+    r = {
+      id:        row.id,
+      date:      row.date,
+      libelle:   row.libelle,
+      categorie: row.categorie || row.cat || '',
+      montant:   row.montant,
+      benef:     row.benef || null,
+      comment:   row.comment || null
+    };
+  }
+  _SB.from(tbl).upsert(r, {onConflict:'id'}).then(({error}) => {
     if(error){
       console.warn('Supabase sync:', tbl, error.message);
       toast('⚠️ Sync erreur: '+error.message, true);
