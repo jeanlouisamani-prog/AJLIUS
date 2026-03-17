@@ -1181,7 +1181,7 @@ select.micro:focus{border-color:var(--green2);}
         <div class="search-box"><span style="color:var(--text3)">⌕</span><input id="dep-search" placeholder="Rechercher..." oninput="renderDepTable()"></div>
       </div>
     </div>
-    <div class="scroll-x"><table class="tbl"><thead><tr><th>Date</th><th>Bénéficiaire</th><th>Libellé</th><th>Catégorie</th><th class="num">Montant</th><th>Note</th><th></th></tr></thead><tbody id="dep-tbody"></tbody></table></div>
+    <div class="scroll-x"><table class="tbl"><thead><tr><th>Date</th><th>Bénéficiaire</th><th>Libellé</th><th>Catégorie</th><th class="num">Montant</th><th>Note</th></tr></thead><tbody id="dep-tbody"></tbody></table></div>
   </div>
 </div>
 
@@ -2940,7 +2940,8 @@ function renderCATable(){
   let arr=ld(K.ca);
   if(q)arr=arr.filter(x=>(x.client+x.produit).toLowerCase().includes(q));
   arr.sort((a,b)=>b.date.localeCompare(a.date));
-  document.getElementById('ca-tbody').innerHTML=arr.map(x=>`
+  window._caIdx = arr;
+  document.getElementById('ca-tbody').innerHTML=arr.map((x,i)=>`
     <tr>
       <td class="muted" style="font-family:'JetBrains Mono',monospace;font-size:.7rem">${fdt(x.date)}</td>
       <td><a class="row-link" onclick="openFicheByName('${x.client}')">${x.client}</a></td>
@@ -2949,8 +2950,8 @@ function renderCATable(){
       <td class="muted">${x.mois}</td>
       <td class="muted">${x.annee}</td>
       <td><div style="display:flex;gap:4px">
-        <button class="btn btn-outline btn-sm btn-icon" onclick='openModal("modal-ca",${JSON.stringify(x)})'>✏️</button>
-        <button class="btn btn-red btn-sm btn-icon" onclick='delRow("${K.ca}","${x.id}")'>🗑</button>
+        <button class="btn btn-outline btn-sm btn-icon" onclick="openModal('modal-ca',window._caIdx[${i}])">✏️</button>
+        <button class="btn btn-red btn-sm btn-icon" onclick="delRow('${K.ca}',window._caIdx[${i}].id)">🗑</button>
       </div></td>
     </tr>`).join('')||`<tr><td colspan="7"><div class="empty"><div class="empty-ico">📭</div>Aucune vente</div></td></tr>`;
 }
@@ -2977,6 +2978,7 @@ function renderCrTable(){
   let arr=ld(K.cr);
   if(crF!=='all')arr=arr.filter(x=>x.statut===crF);
   arr.sort((a,b)=>{const o={urgent:0,encours:1,solde:2};return(o[a.statut]||1)-(o[b.statut]||1)||b.montant-a.montant;});
+  window._crIdx = arr;
   document.getElementById('cr-tbody').innerHTML=arr.map((x,i)=>`
     <tr>
       <td class="muted" style="font-family:'JetBrains Mono',monospace">${i+1}</td>
@@ -2986,8 +2988,8 @@ function renderCrTable(){
       <td class="muted" style="font-size:.7rem">${fdt(x.date)}</td>
       <td style="font-size:.7rem;color:var(--text3);max-width:130px">${x.note||'—'}</td>
       <td><div style="display:flex;gap:4px">
-        <button class="btn btn-outline btn-sm btn-icon" onclick='openModal("modal-creance",${JSON.stringify(x)})'>✏️</button>
-        <button class="btn btn-red btn-sm btn-icon" onclick='delRow("${K.cr}","${x.id}")'>🗑</button>
+        <button class="btn btn-outline btn-sm btn-icon" onclick="openModal('modal-creance',window._crIdx[${i}])">✏️</button>
+        <button class="btn btn-red btn-sm btn-icon" onclick="delRow('${K.cr}',window._crIdx[${i}].id)">🗑</button>
       </div></td>
     </tr>`).join('')||`<tr><td colspan="7"><div class="empty"><div class="empty-ico">📭</div>Aucune créance</div></td></tr>`;
 }
@@ -3022,41 +3024,54 @@ function rDep(){
     </div>`).join('');
   renderDepTable();
 }
-window._depIdx = [];
+// Table dépenses indexée par ID — fiable même après filtre/tri
+window._depMap = {};
 function renderDepTable(){
   const mf=gv('dep-mois'),q=(gv('dep-search')||'').toLowerCase();
   let arr=ld(K.dep);
   if(mf)arr=arr.filter(x=>x.date&&x.date.startsWith(mf));
   if(q)arr=arr.filter(x=>((x.benef||'')+(x.libelle||'')+(x.cat||x.categorie||'')).toLowerCase().includes(q));
   arr.sort((a,b)=>b.date.localeCompare(a.date));
-  window._depIdx = arr; // stocker le tableau filtré pour accès par index
-  document.getElementById('dep-tbody').innerHTML=arr.map((x,i)=>`
-    <tr>
+  // Map par ID — pas d'index qui peut changer
+  window._depMap = {};
+  arr.forEach(x => window._depMap[x.id] = x);
+  document.getElementById('dep-tbody').innerHTML=arr.map(x=>`
+    <tr onclick="openDepFiche('${x.id}')" style="cursor:pointer;">
       <td class="muted" style="font-family:'JetBrains Mono',monospace;font-size:.7rem">${fdt(x.date)}</td>
-      <td><strong>${x.benef}</strong></td>
+      <td><strong style="color:var(--green2)">${x.benef||'—'}</strong></td>
       <td style="color:var(--text2)">${x.libelle}</td>
       <td><span class="tag" style="background:${CATCOL[x.cat||x.categorie]||'#aaa'}18;color:${CATCOL[x.cat||x.categorie]||'#555'};border-color:${CATCOL[x.cat||x.categorie]||'#aaa'}30">${x.cat||x.categorie||'—'}</span></td>
-      <td class="num">${fmt(x.montant)}</td>
+      <td class="num" style="font-weight:700;color:var(--red)">${fmt(x.montant)}</td>
       <td style="font-size:.68rem;color:var(--text3)">${x.comment||'—'}</td>
-      <td><div style="display:flex;gap:4px">
-        <button class="btn btn-outline btn-sm btn-icon" onclick="editDep(${i})" title="Modifier">✏️</button>
-        <button class="btn btn-red btn-sm btn-icon" onclick="delDep(${i})">🗑</button>
-      </div></td>
-    </tr>`).join('')||`<tr><td colspan="7"><div class="empty"><div class="empty-ico">📭</div>Aucune dépense</div></td></tr>`;
+    </tr>`).join('')||`<tr><td colspan="6"><div class="empty"><div class="empty-ico">📭</div>Aucune dépense</div></td></tr>`;
 }
-function editDep(i){
-  const x = window._depIdx[i];
+function openDepFiche(id){
+  const x = window._depMap[id];
   if(!x){ toast('Dépense introuvable',true); return; }
-  EID = x.id;
-  // Normaliser cat/categorie avant fillM
-  const xn = {...x, cat: x.cat||x.categorie||'', benef: x.benef||'—', comment: x.comment||x.note||''};
+  const f = document.getElementById('modal-dep-fiche');
+  f.querySelector('.df-libelle').textContent  = x.libelle||'';
+  f.querySelector('.df-benef').textContent    = x.benef||'—';
+  f.querySelector('.df-date').textContent     = x.date?fdt(x.date):'—';
+  f.querySelector('.df-cat').textContent      = x.cat||x.categorie||'—';
+  f.querySelector('.df-montant').textContent  = fmt(x.montant)+' FCFA';
+  f.querySelector('.df-comment').textContent  = x.comment||'Aucun commentaire';
+  f.dataset.depId = id;
+  f.classList.add('open');
+}
+function depFicheModifier(){
+  const id = document.getElementById('modal-dep-fiche').dataset.depId;
+  const x = window._depMap[id];
+  if(!x){ toast('Dépense introuvable',true); return; }
+  closeModal('modal-dep-fiche');
+  EID = id;
+  const xn = {...x, cat: x.cat||x.categorie||'', benef: x.benef||'', comment: x.comment||''};
   document.getElementById('modal-depense').classList.add('open');
-  fillM('modal-depense', xn);
+  setTimeout(()=>fillM('modal-depense', xn), 50);
 }
-function delDep(i){
-  const x = window._depIdx[i];
-  if(!x){ toast('Dépense introuvable',true); return; }
-  delRow(K.dep, x.id);
+function depFicheSupprimer(){
+  const id = document.getElementById('modal-dep-fiche').dataset.depId;
+  closeModal('modal-dep-fiche');
+  delRow(K.dep, id);
 }
 
 /* ══ RENDER CLIENTS ══ */
@@ -3248,7 +3263,7 @@ function rFiche(cl){
       <td>${x.statut==='urgent'?'<span class="tag tag-red">URGENT</span>':x.statut==='encours'?'<span class="tag tag-amber">EN COURS</span>':'<span class="tag tag-green">SOLDÉ</span>'}</td>
       <td class="muted" style="font-size:.7rem">${fdt(x.date)}</td>
       <td style="font-size:.7rem;color:var(--text3)">${x.note||'—'}</td>
-      <td><button class="btn btn-outline btn-sm btn-icon" onclick='openModal("modal-creance",${JSON.stringify(x)})'>✏️</button></td>
+      <td><button class="btn btn-outline btn-sm btn-icon" onclick="openModal('modal-creance',window._crIdx[${i}])">✏️</button></td>
     </tr>`).join('') : `<tr><td colspan="5"><div class="empty"><div class="empty-ico">✅</div>Aucune créance</div></td></tr>`;
 }
 
@@ -3366,7 +3381,8 @@ function rCRM(){
   const arr=prF==='all'?pr:pr.filter(x=>x.interet===prF);
   arr.sort((a,b)=>{if(a.contact&&b.contact)return a.contact.localeCompare(b.contact);if(a.contact)return-1;if(b.contact)return 1;return 0;});
   const today=new Date().toISOString().slice(0,10);
-  document.getElementById('p-grid').innerHTML=arr.length?arr.map(p=>`
+  window._prIdx=arr;
+  document.getElementById('p-grid').innerHTML=arr.length?arr.map((p,pi)=>`
     <div class="pcard">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <div><div class="pcard-name">${p.nom}</div><div class="pcard-sub">📍 ${p.loc||'—'}</div></div>
@@ -3378,8 +3394,8 @@ function rCRM(){
       <div class="pcard-budget">💰 ${fmt(p.budget)} FCFA</div>
       ${p.notes?`<div class="pcard-note">${p.notes}</div>`:''}
       <div class="pcard-actions">
-        <button class="btn btn-outline btn-sm" style="flex:1" onclick='openModal("modal-prospect",${JSON.stringify(p)})'>✏️ Modifier</button>
-        <button class="btn btn-red btn-sm" onclick='delRow("${K.pr}","${p.id}")'>🗑</button>
+        <button class="btn btn-outline btn-sm" style="flex:1" onclick="openModal('modal-prospect',window._prIdx[${pi}])">✏️ Modifier</button>
+        <button class="btn btn-red btn-sm" onclick="delRow('${K.pr}',window._prIdx[${pi}].id)">🗑</button>
       </div>
     </div>`).join(''):'<div class="empty"><div class="empty-ico">🎯</div>Aucun prospect</div>';
 }
@@ -3642,13 +3658,29 @@ async function _loadShared() {
       ind.innerHTML = '📤 Premier démarrage...';
       await _pushLocalToSupabase();
     } else {
-      // Tables remplies → écraser le localStorage avec les données Supabase
-      if(ca.data?.length)  localStorage.setItem('aj_ca',  JSON.stringify(ca.data));
-      if(cr.data?.length)  localStorage.setItem('aj_cr',  JSON.stringify(cr.data));
-      if(dep.data?.length) localStorage.setItem('aj_dep', JSON.stringify(dep.data));
-      if(pr.data?.length)  localStorage.setItem('aj_pr',  JSON.stringify(pr.data));
-      if(st.data?.length)  localStorage.setItem('aj_st',  JSON.stringify(st.data));
-      if(mv.data?.length)  localStorage.setItem('aj_mv',  JSON.stringify(mv.data));
+      // Fonction de fusion : Supabase + entrées locales non encore synchronisées
+      function mergeData(lsKey, sbRows){
+        if(!sbRows?.length) return;
+        const local = JSON.parse(localStorage.getItem(lsKey)||'[]');
+        const sbIds = new Set(sbRows.map(r=>r.id));
+        // Garder les entrées locales qui ne sont pas encore dans Supabase
+        const localOnly = local.filter(r => !sbIds.has(r.id));
+        if(localOnly.length){
+          // Repousser vers Supabase les entrées manquantes
+          localOnly.forEach(r => _sbUps(lsKey, r));
+        }
+        // Fusionner : Supabase en priorité + locales absentes de Supabase
+        const merged = [...sbRows, ...localOnly];
+        localStorage.setItem(lsKey, JSON.stringify(merged));
+      }
+
+      // Tables remplies → fusionner Supabase + localStorage
+      mergeData('aj_ca',  ca.data);
+      mergeData('aj_cr',  cr.data);
+      mergeData('aj_dep', dep.data);
+      mergeData('aj_pr',  pr.data);
+      mergeData('aj_st',  st.data);
+      mergeData('aj_mv',  mv.data);
       if(cl.data?.length) {
         localStorage.setItem('aj_cl',  JSON.stringify(cl.data));
         localStorage.setItem('aj_cl_seeded', '1');
@@ -4757,5 +4789,44 @@ function ejFicheSupprimer(){
 }
 </script>
 
+
+<!-- ═══ MODAL FICHE DÉPENSE ═══ -->
+<div class="overlay" id="modal-dep-fiche">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-head">
+      <div class="modal-title">💸 Fiche Dépense</div>
+      <button class="modal-close" onclick="closeModal('modal-dep-fiche')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:20px;">
+      <div class="df-libelle" style="font-size:1.1rem;font-weight:800;color:var(--text);margin-bottom:16px;"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;">
+        <div style="background:var(--bg2);border-radius:10px;padding:12px;">
+          <div style="font-size:.6rem;color:var(--text3);margin-bottom:3px;">DATE</div>
+          <div class="df-date" style="font-weight:600;font-size:.85rem;"></div>
+        </div>
+        <div style="background:var(--bg2);border-radius:10px;padding:12px;">
+          <div style="font-size:.6rem;color:var(--text3);margin-bottom:3px;">MONTANT</div>
+          <div class="df-montant" style="font-weight:700;font-size:.95rem;color:var(--red);"></div>
+        </div>
+        <div style="background:var(--bg2);border-radius:10px;padding:12px;">
+          <div style="font-size:.6rem;color:var(--text3);margin-bottom:3px;">BÉNÉFICIAIRE</div>
+          <div class="df-benef" style="font-weight:600;font-size:.85rem;"></div>
+        </div>
+        <div style="background:var(--bg2);border-radius:10px;padding:12px;">
+          <div style="font-size:.6rem;color:var(--text3);margin-bottom:3px;">CATÉGORIE</div>
+          <div class="df-cat" style="font-weight:600;font-size:.85rem;"></div>
+        </div>
+      </div>
+      <div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:18px;">
+        <div style="font-size:.6rem;color:var(--text3);margin-bottom:3px;">COMMENTAIRE</div>
+        <div class="df-comment" style="font-size:.85rem;color:var(--text2);"></div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-green" style="flex:1;" onclick="depFicheModifier()">✏️ Modifier</button>
+        <button class="btn btn-red" onclick="depFicheSupprimer()">🗑 Supprimer</button>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
