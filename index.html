@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#2D6A4F">
-<title>AJLUS · Restor OS</title>
+<title>AJLUS · Restor OS v5.9</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 /* ═══════════ DESIGN TOKENS — THÈME BEIGE/CRÈME ═══════════ */
@@ -1140,8 +1140,7 @@ select.micro:focus{border-color:var(--green2);}
 <!-- ═══ CRÉANCES ═══ -->
 <div class="page" id="page-creances">
   <div class="sec-hd fxb mb24">
-    <div><div class="sec-title">Créances</div><div class="sec-sub">Suivi du recouvrement · Statuts & montants</div></div>
-    <button class="btn btn-green" onclick="openModal('modal-creance')">＋ Ajouter Créance</button>
+    <div><div class="sec-title">Créances</div><div class="sec-sub">Alimentées automatiquement depuis les fiches clients · Solde dû en temps réel</div></div>
   </div>
   <div class="kpi-row" id="cr-kpis"></div>
   <div id="cr-alert" class="mb20"></div>
@@ -1294,7 +1293,7 @@ select.micro:focus{border-color:var(--green2);}
       <div class="scroll-x"><table class="tbl"><thead><tr><th>Date</th><th>Produit</th><th class="num">Montant</th><th>Période</th></tr></thead><tbody id="fiche-ventes-tbody"></tbody></table></div>
     </div>
     <div class="gcard">
-      <div class="gcard-head"><div class="gcard-title"><div class="dot red"></div>Créances enregistrées</div><button class="btn btn-outline btn-sm" onclick="openModal('modal-creance')">＋ Créance</button></div>
+      <div class="gcard-head"><div class="gcard-title"><div class="dot red"></div>Créances — calculées automatiquement</div></div>
       <div class="scroll-x"><table class="tbl"><thead><tr><th class="num">Montant</th><th>Statut</th><th>Date</th><th>Note</th><th></th></tr></thead><tbody id="fiche-cr-tbody"></tbody></table></div>
     </div>
   </div>
@@ -1380,7 +1379,9 @@ select.micro:focus{border-color:var(--green2);}
     <div class="fpill" onclick="filterP('Intéressé',this)">⭐ Intéressés</div>
     <div class="fpill" onclick="filterP('Tiède',this)">❄️ Tièdes</div>
     <div class="fpill" onclick="filterP('Froid',this)">🌧 Froids</div>
+    <div class="fpill" onclick="filterP('Converti',this)" style="background:var(--green-s2);color:var(--green);border-color:rgba(45,106,79,.25);">✅ Convertis</div>
   </div>
+  <div id="crm-conversion-banner" style="display:none;margin-bottom:14px;padding:12px 16px;background:var(--green-s);border:1px solid var(--border2);border-radius:12px;font-size:.78rem;color:var(--green);font-weight:600;"></div>
   <div class="pgrid" id="p-grid"></div>
 </div>
 
@@ -1855,9 +1856,14 @@ const CATCOL={"Main-d'œuvre":'#2D6A4F','Transport & Logistique':'#2980B9',"Mat�
 
 /* ══ SEED DATA ══ */
 function seed(){
-  const DATA_VER = 'v6_20260309';
+  const DATA_VER = 'v8_20260318';
   const cur = localStorage.getItem('aj_data_ver');
-  // Effacer TOUT si pas exactement à jour (ancienne version ou cache corrompu)
+  // Sauvegarder les données utilisateur AVANT tout effacement
+  const savedPr  = localStorage.getItem('aj_pr');
+  const savedCl  = localStorage.getItem('aj_cl');
+  const savedCa  = localStorage.getItem('aj_ca');
+  const savedCr  = localStorage.getItem('aj_cr');
+  const savedDep = localStorage.getItem('aj_dep');
   if(cur !== DATA_VER){
     Object.keys(localStorage).filter(k=>k.startsWith('aj_')).forEach(k=>localStorage.removeItem(k));
   }
@@ -2114,40 +2120,11 @@ function seed(){
     {id:'v0246',date:'2026-02-01',client:'Client BLOLEQUIN',produit:'RESTOR Engrais Organique',montant:680000,mois:'FÉV',annee:'2026',localite:'',note:''},
     {id:'v0247',date:'2026-02-01',client:'Maturin',produit:'RESTOR Engrais Organique',montant:160000,mois:'FÉV',annee:'2026',localite:'',note:''}
   ]);
-  // ── Créances — 10 débiteurs — Total: 16,288,000 FCFA ──
-  sv(K.cr,
-  [
-    {id:'cr0001',date:'2026-03-09',client:'KOUAME',montant:5260000,statut:'urgent',note:''},
-    {id:'cr0002',date:'2026-03-09',client:'TOURE MAMADOU',montant:3796000,statut:'urgent',note:''},
-    {id:'cr0003',date:'2026-03-09',client:'SORY SALIF',montant:2400000,statut:'urgent',note:''},
-    {id:'cr0004',date:'2026-03-09',client:'BONKOUNGOU ISSOUF',montant:1392000,statut:'urgent',note:''},
-    {id:'cr0005',date:'2026-03-09',client:'DAGO',montant:1200000,statut:'urgent',note:''},
-    {id:'cr0006',date:'2026-03-09',client:'MAHAMANE SALIF',montant:996000,statut:'urgent',note:''},
-    {id:'cr0007',date:'2026-03-09',client:'JACQUE',montant:600000,statut:'urgent',note:''},
-    {id:'cr0008',date:'2026-03-09',client:'BONIPHON CHRISTELLE',montant:420000,statut:'encours',note:''},
-    {id:'cr0009',date:'2026-03-09',client:'BOUDA',montant:128000,statut:'encours',note:''},
-    {id:'cr0010',date:'2026-03-09',client:'OUDA',montant:96000,statut:'encours',note:''}
-  ]);
-  // ── Clients — 15 grands comptes ──
-  sv(K.cl,
-  [
-    {id:'cl0002',nom:'KOUAME',loc:'',tel:'',wa:'',email:'',statut_client:'VIP',secteur:'Commerce',encours_dep:0,activite:'Commerce',notes:''},
-    {id:'cl0003',nom:'SORY SALIF',loc:'',tel:'',wa:'',email:'',statut_client:'Actif',secteur:'Agriculture',encours_dep:0,activite:'Agriculture',notes:''},
-    {id:'cl0004',nom:'TOURE MAMADOU',loc:'',tel:'',wa:'',email:'',statut_client:'VIP',secteur:'Agriculture',encours_dep:0,activite:'Agriculture',notes:''},
-    {id:'cl0005',nom:'MAHAMANE SALIF',loc:'',tel:'',wa:'',email:'',statut_client:'VIP',secteur:'Agriculture',encours_dep:0,activite:'Agriculture',notes:''},
-    {id:'cl0006',nom:'BOUDA',loc:'',tel:'',wa:'',email:'',statut_client:'VIP',secteur:'Commerce',encours_dep:0,activite:'Commerce',notes:''},
-    {id:'cl0007',nom:'BONKOUNGOU ISSOUF',loc:'',tel:'',wa:'',email:'',statut_client:'VIP',secteur:'Agriculture',encours_dep:0,activite:'Agriculture',notes:''},
-    {id:'cl0008',nom:'ZOGBE FIDEL',loc:'',tel:'',wa:'',email:'',statut_client:'Actif',secteur:'Agriculture',encours_dep:0,activite:'Agriculture',notes:''},
-    {id:'cl0009',nom:'AROUNA LAKOTA',loc:'',tel:'',wa:'',email:'',statut_client:'VIP',secteur:'Agriculture',encours_dep:0,activite:'Agriculture',notes:''},
-    {id:'cl0010',nom:'SAVADOGO',loc:'',tel:'',wa:'',email:'',statut_client:'Stratégique',secteur:'Agriculture',encours_dep:0,activite:'Agriculture',notes:''},
-    {id:'cl0011',nom:'OUDA',loc:'',tel:'',wa:'',email:'',statut_client:'Actif',secteur:'Commerce',encours_dep:0,activite:'Commerce',notes:''},
-    {id:'cl0012',nom:'KONAN',loc:'',tel:'',wa:'',email:'',statut_client:'Actif',secteur:'Agriculture',encours_dep:0,activite:'Agriculture',notes:''},
-    {id:'cl0013',nom:'CABEMA',loc:'',tel:'',wa:'',email:'',statut_client:'Dormant',secteur:'Commerce',encours_dep:0,activite:'Commerce',notes:''},
-    {id:'cl0014',nom:'DAGO',loc:'',tel:'',wa:'',email:'',statut_client:'Stratégique',secteur:'Agriculture',encours_dep:0,activite:'Agriculture',notes:''},
-    {id:'cl0015',nom:'JACQUE',loc:'',tel:'',wa:'',email:'',statut_client:'À risque',secteur:'Commerce',encours_dep:0,activite:'Commerce',notes:''},
-    {id:'cl0016',nom:'BONIPHON CHRISTELLE',loc:'',tel:'',wa:'',email:'',statut_client:'Actif',secteur:'Commerce',encours_dep:0,activite:'Commerce',notes:''}
-  ]);
+  // ── Créances : vides au départ — générées automatiquement depuis les fiches clients ──
+  sv(K.cr,[]);
   localStorage.setItem('aj_cl_seeded','1');
+  // ── Clients : démarrage vide — à créer manuellement ──
+  if(!localStorage.getItem('aj_cl')) sv(K.cl,[]);
   // ── Stock — 44 articles ──
   sv(K.st,
   [
@@ -2389,6 +2366,15 @@ function seed(){
   ]);
   sv(K.pr,[]);
   localStorage.setItem('aj_data_ver', DATA_VER);
+  // ── Restaurer les prospects sauvegardés (ajoutés par l'utilisateur) ──
+  if(savedPr){try{const pr=JSON.parse(savedPr);if(pr.length)sv(K.pr,pr);}catch(e){}}
+  // ── Restaurer les clients créés manuellement (exclure les anciens fictifs du seed) ──
+  const FAKE_IDS=new Set(['cl0002','cl0003','cl0004','cl0005','cl0006','cl0007','cl0008','cl0009','cl0010','cl0011','cl0012','cl0013','cl0014','cl0015','cl0016']);
+  if(savedCl){try{const cl=JSON.parse(savedCl).filter(c=>!FAKE_IDS.has(c.id));if(cl.length){sv(K.cl,cl);
+    // Resynchroniser toutes les créances depuis les fiches récupérées
+    setTimeout(()=>cl.forEach(c=>syncCreanceFromFiche(c)),200);
+  }}catch(e){}}
+  // Les créances fictives du seed ne sont PAS restaurées — elles viennent des fiches clients
 }
 
 
@@ -2471,12 +2457,7 @@ function saveCA(){
   const d={id:EID||uid(),date:gv('ca-date'),client:gv('ca-client').trim(),produit:gv('ca-produit'),montant:gn('ca-montant'),mois:gv('ca-mois'),annee:gv('ca-annee'),localite:gv('ca-localite').trim(),note:gv('ca-note').trim()};
   if(!d.client||!d.montant){toast('Champs obligatoires manquants',true);return;}
   ups(K.ca,d);
-  // Auto-créer client si inexistant
-  const cls=ld(K.cl);
-  if(!cls.find(c=>c.nom.toLowerCase()===d.client.toLowerCase())){
-    cls.unshift({id:uid(),nom:d.client,loc:d.localite||'',tel:'',wa:'',email:'',activite:'',notes:''});
-    sv(K.cl,cls);
-  }
+  // Pas de création automatique de compte client — les fiches sont créées manuellement
   if(!EID&&!paye){
     const statut=d.montant>=500000?'urgent':'encours';
     const cr={id:uid(),client:d.client,montant:d.montant,statut,date:d.date,note:`Auto · ${d.produit}`};
@@ -2534,6 +2515,24 @@ function saveProspect(){
   if(!d.nom){toast('Nom requis',true);return;}
   ups(K.pr,d);closeModal('modal-prospect');toast('Prospect enregistré ✓');rCRM();badges();
 }
+
+/* ══ CONVERSION PROSPECT → CLIENT ══ */
+function convertirProspect(pi){
+  const p=window._prIdx[pi];
+  if(!p){toast('Prospect introuvable',true);return;}
+  // Demander confirmation simple
+  if(!confirm('Confirmer la conversion de "'+p.nom+'" en client ?')) return;
+  const pros=ld(K.pr),idx=pros.findIndex(x=>x.id===p.id);
+  if(idx>=0){
+    pros[idx].statut='Converti';
+    sv(K.pr,pros);
+    _sbUps(K.pr,pros[idx]);
+  }
+  toast('✅ '+p.nom+' marqué comme converti');
+  logActivity('CRM','✅ Prospect '+p.nom+' → converti');
+  rCRM();badges();
+}
+/* ══ FIN CONVERSION ══ */
 function saveStMvt(){
   const sid=gv('st-produit'),type=gv('st-type'),qty=gn('st-qty'),date=gv('st-date'),obs=gv('st-obs').trim();
   if(!sid||!qty){toast('Produit et quantité requis',true);return;}
@@ -2550,7 +2549,12 @@ function saveStMvt(){
 function saveClient(){
   const d={id:EID||uid(),nom:gv('cl-nom').trim(),loc:gv('cl-loc').trim(),tel:gv('cl-tel').trim(),wa:gv('cl-wa').trim(),email:gv('cl-email').trim(),statut_client:gv('cl-statut_client'),secteur:gv('cl-secteur').trim(),encours_dep:parseFloat(gv('cl-encours_dep'))||0,activite:gv('cl-activite').trim(),notes:gv('cl-notes').trim()};
   if(!d.nom){toast('Nom requis',true);return;}
-  ups(K.cl,d);closeModal('modal-client');toast('Client enregistré ✓');rClients();badges();
+  ups(K.cl,d);
+  closeModal('modal-client');
+  // Synchroniser la créance automatiquement si encours_dep > 0
+  syncCreanceFromFiche(d);
+  toast('Client enregistré ✓');
+  rClients();rCr();badges();
   if(FICHE_CL&&FICHE_CL.nom===d.nom){FICHE_CL=d;rFiche(d);}
   logActivity('Client','👥 Client '+d.nom+' enregistré');
 }
@@ -2662,7 +2666,7 @@ function rDashManager(){
     <div class="kcard" onclick="goTo('ca')" style="cursor:pointer"><span class="kcard-icon">📈</span><div class="kcard-label">CA 2026</div><div class="kcard-value green">${(ca26/1e6).toFixed(2)}M</div><div class="kcard-sub">${pct}% objectif · FCFA</div></div>
     <div class="kcard amber" onclick="goTo('creances')" style="cursor:pointer"><span class="kcard-icon">⚠️</span><div class="kcard-label">Créances actives</div><div class="kcard-value amber">${(totCr/1e6).toFixed(2)}M</div><div class="kcard-sub">${cr.filter(x=>x.statut==='urgent').length} urgentes</div></div>
     <div class="kcard red" onclick="goTo('depenses')" style="cursor:pointer"><span class="kcard-icon">💸</span><div class="kcard-label">Dépenses 2026</div><div class="kcard-value red">${(dep/1e6).toFixed(2)}M</div><div class="kcard-sub">FCFA décaissés</div></div>
-    <div class="kcard blue" onclick="goTo('crm')" style="cursor:pointer"><span class="kcard-icon">🎯</span><div class="kcard-label">Prospects chauds</div><div class="kcard-value blue">${pr.filter(x=>x.interet==='Chaud').length}</div><div class="kcard-sub">${pr.filter(x=>x.contact&&new Date(x.contact)>=new Date()).length} RDV à venir</div></div>
+    <div class="kcard blue" onclick="goTo('crm')" style="cursor:pointer"><span class="kcard-icon">🎯</span><div class="kcard-label">Prospects chauds</div><div class="kcard-value blue">${pr.filter(x=>x.interet==='Chaud').length}</div><div class="kcard-sub">✅ ${pr.filter(x=>x.statut==='Converti').length} converti(s) · ${pr.length>0?Math.round(pr.filter(x=>x.statut==='Converti').length/pr.length*100):0}%</div></div>
   </div>
   <div class="g2" style="gap:18px;margin-top:18px">
     <div class="card">
@@ -2738,7 +2742,7 @@ function rDashCommercial(){
     <div class="kcard" onclick="goTo('clients')" style="cursor:pointer"><span class="kcard-icon">👥</span><div class="kcard-label">Clients actifs</div><div class="kcard-value green">${nClients}</div><div class="kcard-sub">comptes suivis</div></div>
     <div class="kcard amber" onclick="goTo('creances')" style="cursor:pointer"><span class="kcard-icon">⚠️</span><div class="kcard-label">À recouvrer</div><div class="kcard-value amber">${fmt(totCr)}</div><div class="kcard-sub">${crUrg} urgentes</div></div>
     <div class="kcard blue" onclick="goTo('crm')" style="cursor:pointer"><span class="kcard-icon">🔥</span><div class="kcard-label">Prospects chauds</div><div class="kcard-value blue">${nChaud}</div><div class="kcard-sub">${nRdv} RDV planifiés</div></div>
-    <div class="kcard red" onclick="goTo('creances')" style="cursor:pointer"><span class="kcard-icon">🔴</span><div class="kcard-label">Créances urgentes</div><div class="kcard-value red">${crUrg}</div><div class="kcard-sub">à traiter en priorité</div></div>
+    <div class="kcard" onclick="goTo('crm')" style="cursor:pointer;border-color:var(--green);"><span class="kcard-icon">✅</span><div class="kcard-label">Taux conversion</div><div class="kcard-value green">${pr.length>0?Math.round(pr.filter(x=>x.statut==='Converti').length/pr.length*100):0}%</div><div class="kcard-sub">${pr.filter(x=>x.statut==='Converti').length} converti(s)</div></div>
   </div>
   <div class="g2" style="gap:18px;margin-top:18px">
     <div class="card">
@@ -2859,7 +2863,7 @@ function rDashFinance(){
 
   // Répartition par catégorie
   const parCat={};
-  dep26.forEach(x=>{parCat[x.cat]=(parCat[x.cat]||0)+x.montant;});
+  dep26.forEach(x=>{const c=x.cat||x.categorie||'Autre';parCat[c]=(parCat[c]||0)+x.montant;});
   const CATCOL={Transport:'#4CAF50',Salaires:'#2196F3',Carburant:'#FF9800',Matériel:'#9C27B0',Communication:'#00BCD4',Divers:'#607D8B'};
 
   document.getElementById('dash-content').innerHTML=`
@@ -2897,7 +2901,7 @@ function rDashFinance(){
   document.getElementById('dash-dep-last').innerHTML=last.map(x=>`<tr>
     <td style="font-family:'JetBrains Mono',monospace;font-size:.7rem">${fdt(x.date)}</td>
     <td><strong>${x.benef}</strong></td>
-    <td><span class="tag tag-muted" style="font-size:.58rem">${x.cat}</span></td>
+    <td><span class="tag tag-muted" style="font-size:.58rem">${x.cat||x.categorie||'—'}</span></td>
     <td class="num" style="color:var(--red)">${fmt(x.montant)}</td>
   </tr>`).join('') || '<tr><td colspan="4"><div class="empty">Aucune dépense</div></td></tr>';
 }
@@ -2925,14 +2929,27 @@ function rCA(){
 }
 function renderCAChart(){
   const yr=gv('ca-yr')||'2026';
-  const vals=MOIS.map(m=>ld(K.ca).filter(x=>x.annee===yr&&x.mois===m).reduce((s,x)=>s+x.montant,0));
+  const allCA=ld(K.ca).filter(x=>x.annee===yr||( !x.annee && x.date&&x.date.startsWith(yr)));
+  // Construire les 12 montants par mois (index 0=Jan … 11=Déc) via la date
+  const vals=Array.from({length:12},(_,i)=>{
+    const mm=String(i+1).padStart(2,'0');
+    // Filtre principal : par date YYYY-MM
+    let sum=allCA.filter(x=>x.date&&x.date.startsWith(yr+'-'+mm)).reduce((s,x)=>s+x.montant,0);
+    // Fallback : par champ mois (MOIS_ABBR) si date absente ou différente
+    if(!sum){
+      const MOIS_ABBR=['JAN','FÉV','MAR','AVR','MAI','JUN','JUL','AOÛ','SEP','OCT','NOV','DÉC'];
+      sum=allCA.filter(x=>x.mois===MOIS_ABBR[i]).reduce((s,x)=>s+x.montant,0);
+    }
+    return sum;
+  });
   const max=Math.max(...vals,1);
   const col=yr==='2026'?'amber':yr==='2025'?'green':'dim';
-  document.getElementById('ca-chart').innerHTML=MOIS.map((mo,i)=>`
+  const MOIS_LBL=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  document.getElementById('ca-chart').innerHTML=vals.map((v,i)=>`
     <div class="bc" style="height:155px">
-      <div class="bc-val">${vals[i]>0?(vals[i]/1e3).toFixed(0)+'K':''}</div>
-      <div class="bc-fill ${col}" style="height:${vals[i]/max*100}%;width:100%"></div>
-      <div class="bc-lbl">${mo.slice(0,3)}</div>
+      <div class="bc-val">${v>0?(v/1e3).toFixed(0)+'K':''}</div>
+      <div class="bc-fill ${col}" style="height:${v/max*100}%;width:100%"></div>
+      <div class="bc-lbl">${MOIS_LBL[i]}</div>
     </div>`).join('');
 }
 function renderCATable(){
@@ -2944,7 +2961,7 @@ function renderCATable(){
   document.getElementById('ca-tbody').innerHTML=arr.map((x,i)=>`
     <tr>
       <td class="muted" style="font-family:'JetBrains Mono',monospace;font-size:.7rem">${fdt(x.date)}</td>
-      <td><a class="row-link" onclick="openFicheByName('${x.client}')">${x.client}</a></td>
+      <td style="font-weight:600;color:var(--text)">${x.client}</td>
       <td style="color:var(--text2)">${x.produit}</td>
       <td class="num">${fmt(x.montant)}</td>
       <td class="muted">${x.mois}</td>
@@ -3004,7 +3021,7 @@ function rDep(){
     <div class="kcard"><span class="kcard-icon">📅</span><div class="kcard-label">Mars 2026</div><div class="kcard-value">${fmt(mn('2026-03'))}</div><div class="kcard-sub">FCFA</div></div>
     <div class="kcard amber"><span class="kcard-icon">💸</span><div class="kcard-label">Total 2026</div><div class="kcard-value amber">${fmt(tot)}</div><div class="kcard-sub">FCFA cumulé</div></div>
   `;
-  const cats={};dep.forEach(x=>{cats[x.cat]=(cats[x.cat]||0)+x.montant;});
+  const cats={};dep.forEach(x=>{const c=x.cat||x.categorie||'Autre';cats[c]=(cats[c]||0)+x.montant;});
   document.getElementById('dep-cats').innerHTML=Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
     <div class="depcat-item">
       <div class="depcat-dot" style="background:${CATCOL[k]||'#aaa'}"></div>
@@ -3080,17 +3097,16 @@ function rClients(){
   const ca=ld(K.ca);
   const cr=ld(K.cr);
   const q=(gv('cl-search')||'').toLowerCase();
-  const arr=q?cls.filter(c=>c.nom.toLowerCase().includes(q)||c.loc.toLowerCase().includes(q)):cls;
+  const arr=q?cls.filter(c=>c.nom.toLowerCase().includes(q)||((c.loc||'').toLowerCase()).includes(q)):cls;
 
-  const totCA=arr.reduce((s,c)=>{const v=ca.filter(x=>x.client.toLowerCase()===c.nom.toLowerCase()).reduce((ss,x)=>ss+x.montant,0);return s+v;},0);
   document.getElementById('cl-kpis').innerHTML=`
-    <div class="kcard"><span class="kcard-icon">👥</span><div class="kcard-label">Clients total</div><div class="kcard-value">${cls.length}</div><div class="kcard-sub">comptes actifs</div></div>
+    <div class="kcard"><span class="kcard-icon">👥</span><div class="kcard-label">Clients</div><div class="kcard-value">${cls.length}</div><div class="kcard-sub">fiches créées</div></div>
     <div class="kcard amber"><span class="kcard-icon">⚠️</span><div class="kcard-label">Avec créances</div><div class="kcard-value amber">${[...new Set(cr.filter(x=>x.statut!=='solde').map(x=>x.client))].length}</div><div class="kcard-sub">clients débiteurs</div></div>
-    <div class="kcard blue"><span class="kcard-icon">💰</span><div class="kcard-label">CA total clients</div><div class="kcard-value blue">${(ca.reduce((s,x)=>s+x.montant,0)/1e6).toFixed(1)}M</div><div class="kcard-sub">FCFA toutes années</div></div>
+    <div class="kcard blue"><span class="kcard-icon">💰</span><div class="kcard-label">CA total</div><div class="kcard-value blue">${(ca.reduce((s,x)=>s+x.montant,0)/1e6).toFixed(1)}M</div><div class="kcard-sub">FCFA toutes années</div></div>
     <div class="kcard"><span class="kcard-icon">🏆</span><div class="kcard-label">CA 2026</div><div class="kcard-value green">${(ca.filter(x=>x.annee==='2026').reduce((s,x)=>s+x.montant,0)/1e6).toFixed(2)}M</div><div class="kcard-sub">FCFA</div></div>
   `;
 
-  document.getElementById('client-grid-wrap').innerHTML=arr.length?arr.map(c=>{
+  document.getElementById('client-grid-wrap').innerHTML=arr.length?`<div class="client-grid">`+arr.map(c=>{
     const caC=ca.filter(x=>x.client.toLowerCase()===c.nom.toLowerCase()).reduce((s,x)=>s+x.montant,0);
     const crC=cr.filter(x=>x.client.toLowerCase()===c.nom.toLowerCase()&&x.statut!=='solde').reduce((s,x)=>s+x.montant,0);
     const nAchats=ca.filter(x=>x.client.toLowerCase()===c.nom.toLowerCase()).length;
@@ -3114,8 +3130,8 @@ function rClients(){
       </div>
       ${c.tel||c.wa?`<div style="font-size:.7rem;color:var(--text3);margin-bottom:8px">${c.tel?'📞 '+c.tel:''} ${c.wa?'· 📱 '+c.wa:''}</div>`:''}
       <div class="cl-stats">
-        <div class="cl-stat"><div class="cl-stat-val">${fmt(caC)}</div><div class="cl-stat-lbl">CA total (FCFA)</div></div>
-        <div class="cl-stat"><div class="cl-stat-val">${nAchats}</div><div class="cl-stat-lbl">commandes</div></div>
+        <div class="cl-stat"><div class="cl-stat-val">${fmt(caC)}</div><div class="cl-stat-lbl">CA lié (FCFA)</div></div>
+        <div class="cl-stat"><div class="cl-stat-val">${nAchats}</div><div class="cl-stat-lbl">ventes enregistrées</div></div>
         ${solde>0?`<div class="cl-stat"><div class="cl-stat-val" style="color:var(--red)">${fmt(solde)}</div><div class="cl-stat-lbl">solde dû</div></div>`:''}
       </div>
       <div class="cl-actions">
@@ -3124,7 +3140,14 @@ function rClients(){
         <button class="btn btn-red btn-sm btn-icon" onclick="event.stopPropagation();delRow('aj_cl','${c.id}')">🗑</button>
       </div>
     </div>`;
-  }).join(''):`<div class="empty"><div class="empty-ico">👥</div>Aucun client trouvé</div>`;
+  }).join('')+`</div>`
+  :`<div class="empty"><div class="empty-ico">👥</div>Aucun client — créez les fiches manuellement via "＋ Nouveau Client"</div>`;
+}
+
+function creerFicheRapide(nom){
+  EID=null;
+  openModal('modal-client');
+  setTimeout(()=>{const el=document.getElementById('cl-nom');if(el){el.value=nom;el.focus();}},60);
 }
 
 /* ══ FICHE CLIENT ══ */
@@ -3344,25 +3367,54 @@ function saveTxn(){
   if(!cmd&&!pmt){toast('Saisissez un montant',true);return;}
   const ref    = document.getElementById('txn-ref').value.trim();
   const dateVal= document.getElementById('txn-date').value;
-  // Période lisible
   const periode= dateVal ? (()=>{const d=new Date(dateVal);return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'});})() : '—';
   const txn={id:uid(),ref,date:dateVal,periode,commande:cmd,produit:document.getElementById('txn-produit').value.trim()||null,paiement:pmt,obs:document.getElementById('txn-obs').value.trim()};
   const arr=getTxns(FICHE_CL.nom); arr.push(txn); setTxns(FICHE_CL.nom,arr); _sbTxn(FICHE_CL.nom,txn);
-  // Mise à jour créance si paiement
-  if(pmt){
-    const crs=ld(K.cr);
-    const idx=crs.findIndex(c=>c.client.toLowerCase()===FICHE_CL.nom.toLowerCase()&&c.statut!=='solde');
-    if(idx>=0){
-      crs[idx].montant=Math.max(0,(crs[idx].montant||0)-pmt);
-      if(crs[idx].montant===0)crs[idx].statut='solde';
-      else crs[idx].statut='encours';
-      sv(K.cr,crs);
-    }
-  }
-  const st=txnCalc(txn, 0); // statut pour le toast
+
+  // ── Recalculer le solde dû et synchroniser automatiquement la créance ──
+  syncCreanceFromFiche(FICHE_CL);
+
+  const st=txnCalc(txn, 0);
   closeModal('modal-txn');
   toast('✓ '+st.lbl+' enregistré');
-  rFiche(FICHE_CL); rDash(); badges();
+  rFiche(FICHE_CL); rDash(); rCr(); badges();
+}
+
+/* ══ SYNC CRÉANCE DEPUIS FICHE CLIENT ══
+   Appelée après chaque transaction. Crée ou met à jour la créance
+   liée au client selon son solde dû réel. */
+function syncCreanceFromFiche(cl){
+  const txns   = getTxns(cl.nom);
+  const encInit= parseFloat(cl.encours_dep)||0;
+  const totCmd = txns.reduce((s,t)=>s+(t.commande||0),0);
+  const totPaye= txns.reduce((s,t)=>s+(t.paiement||0),0);
+  const solde  = Math.max(0, encInit + totCmd - totPaye);
+
+  const crs = ld(K.cr);
+  const idx = crs.findIndex(c=>c.client.toLowerCase()===cl.nom.toLowerCase());
+
+  if(solde > 0){
+    const statut = solde >= 500000 ? 'urgent' : 'encours';
+    if(idx >= 0){
+      // Mettre à jour la créance existante
+      crs[idx].montant = solde;
+      crs[idx].statut  = statut;
+      crs[idx].date    = new Date().toISOString().slice(0,10);
+      crs[idx].note    = 'Auto · Fiche client';
+      sv(K.cr, crs); _sbUps(K.cr, crs[idx]);
+    } else {
+      // Créer la créance
+      const cr={id:uid(),client:cl.nom,montant:solde,statut,date:new Date().toISOString().slice(0,10),note:'Auto · Fiche client'};
+      crs.unshift(cr); sv(K.cr, crs); _sbUps(K.cr, cr);
+    }
+  } else {
+    // Solde = 0 → marquer soldé si créance existante
+    if(idx >= 0){
+      crs[idx].montant = 0;
+      crs[idx].statut  = 'solde';
+      sv(K.cr, crs); _sbUps(K.cr, crs[idx]);
+    }
+  }
 }
 
 /* ══ RENDER CRM ══ */
@@ -3370,34 +3422,58 @@ let prF='all';
 function filterP(f,el){prF=f;document.querySelectorAll('#page-crm .fpill').forEach(p=>p.classList.remove('on'));el.classList.add('on');rCRM();}
 function rCRM(){
   const pr=ld(K.pr),hot=pr.filter(x=>x.interet==='Chaud');
+  const convertis=pr.filter(x=>x.statut==='Converti');
+  const totalActifs=pr.filter(x=>x.statut!=='Converti').length;
+  const txConv=pr.length>0?Math.round(convertis.length/pr.length*100):0;
   document.getElementById('crm-kpis').innerHTML=`
-    <div class="kcard"><span class="kcard-icon">🎯</span><div class="kcard-label">Total prospects</div><div class="kcard-value">${pr.length}</div><div class="kcard-sub">en suivi</div></div>
+    <div class="kcard"><span class="kcard-icon">🎯</span><div class="kcard-label">Total prospects</div><div class="kcard-value">${pr.length}</div><div class="kcard-sub">${totalActifs} actifs</div></div>
     <div class="kcard red"><span class="kcard-icon">🔥</span><div class="kcard-label">Chauds</div><div class="kcard-value red">${hot.length}</div><div class="kcard-sub">à conclure</div></div>
-    <div class="kcard amber"><span class="kcard-icon">💰</span><div class="kcard-label">Budget estimé</div><div class="kcard-value amber">${fmt(pr.reduce((s,x)=>s+x.budget,0))}</div><div class="kcard-sub">FCFA</div></div>
+    <div class="kcard amber"><span class="kcard-icon">💰</span><div class="kcard-label">Budget estimé</div><div class="kcard-value amber">${fmt(pr.filter(x=>x.statut!=='Converti').reduce((s,x)=>s+x.budget,0))}</div><div class="kcard-sub">FCFA</div></div>
     <div class="kcard blue"><span class="kcard-icon">📅</span><div class="kcard-label">RDV à venir</div><div class="kcard-value blue">${pr.filter(x=>x.contact&&new Date(x.contact)>=new Date()).length}</div><div class="kcard-sub">planifiés</div></div>
+    <div class="kcard" style="border-color:var(--green);"><span class="kcard-icon">✅</span><div class="kcard-label">Convertis</div><div class="kcard-value green">${convertis.length}</div><div class="kcard-sub" style="font-weight:700;color:var(--green2)">Taux : ${txConv}%</div></div>
   `;
-  const IC={'Chaud':'tag-red','Intéressé':'tag-amber','Tiède':'tag-blue','Froid':'tag-muted'};
-  const II={'Chaud':'🔥','Intéressé':'⭐','Tiède':'❄️','Froid':'🌧'};
-  const arr=prF==='all'?pr:pr.filter(x=>x.interet===prF);
+  // Bannière taux de conversion
+  const banner=document.getElementById('crm-conversion-banner');
+  if(prF==='Converti'){
+    banner.style.display='block';
+    banner.innerHTML=`✅ <strong>${convertis.length} prospect(s) converti(s) en clients</strong> sur ${pr.length} au total — Taux de conversion : <strong style="font-size:1rem;color:var(--green);">${txConv}%</strong> &nbsp;·&nbsp; <button class="link-btn" onclick="filterP('all',document.querySelector('#page-crm .fpill'))">← Retour aux prospects actifs</button>`;
+  } else { banner.style.display='none'; }
+  const IC={'Chaud':'tag-red','Intéressé':'tag-amber','Tiède':'tag-blue','Froid':'tag-muted','Converti':'tag-green'};
+  const II={'Chaud':'🔥','Intéressé':'⭐','Tiède':'❄️','Froid':'🌧','Converti':'✅'};
+  // Convertis → espace séparé. Vue principale = prospects actifs uniquement
+  let arr;
+  if(prF==='Converti'){
+    arr=pr.filter(x=>x.statut==='Converti');
+  } else if(prF==='all'){
+    arr=pr.filter(x=>x.statut!=='Converti');
+  } else {
+    arr=pr.filter(x=>x.interet===prF && x.statut!=='Converti');
+  }
   arr.sort((a,b)=>{if(a.contact&&b.contact)return a.contact.localeCompare(b.contact);if(a.contact)return-1;if(b.contact)return 1;return 0;});
   const today=new Date().toISOString().slice(0,10);
   window._prIdx=arr;
-  document.getElementById('p-grid').innerHTML=arr.length?arr.map((p,pi)=>`
-    <div class="pcard">
+  document.getElementById('p-grid').innerHTML=arr.length?arr.map((p,pi)=>{
+    const isConverti=p.statut==='Converti';
+    // Vérifier si déjà client
+    const dejaClient=ld(K.cl).some(c=>c.nom.toLowerCase()===p.nom.toLowerCase());
+    return`
+    <div class="pcard" style="${isConverti?'border-color:var(--green2);background:linear-gradient(135deg,#f5fff8,#fdfaf5);':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <div><div class="pcard-name">${p.nom}</div><div class="pcard-sub">📍 ${p.loc||'—'}</div></div>
+        <div><div class="pcard-name">${p.nom}${isConverti?'<span style="margin-left:6px;font-size:.6rem;background:var(--green-s2);color:var(--green2);padding:1px 7px;border-radius:10px;border:1px solid rgba(45,106,79,.2);font-weight:700;">CLIENT ✓</span>':''}</div><div class="pcard-sub">📍 ${p.loc||'—'}</div></div>
         <span class="tag ${IC[p.interet]||'tag-muted'}">${II[p.interet]||''} ${p.interet}</span>
       </div>
       <div class="pcard-row"><span>📱</span><strong>${p.wa||'—'}</strong></div>
       <div class="pcard-row"><span>🌱</span><span class="tag tag-green" style="font-size:.58rem">${p.produit}</span></div>
-      <div class="pcard-row"><span>🏷️</span><span class="tag tag-muted">${p.statut}</span>${p.contact?` <span style="font-size:.7rem;color:${p.contact<today?'var(--red)':'var(--text3)'};font-weight:${p.contact<today?'800':'400'}">· 📅 ${fdt(p.contact)}${p.contact<today?' ⚠️':''}</span>`:''}</div>
+      <div class="pcard-row"><span>🏷️</span><span class="tag ${isConverti?'tag-green':'tag-muted'}">${p.statut}</span>${p.contact?` <span style="font-size:.7rem;color:${p.contact<today?'var(--red)':'var(--text3)'};font-weight:${p.contact<today?'800':'400'}">· 📅 ${fdt(p.contact)}${p.contact<today?' ⚠️':''}</span>`:''}</div>
       <div class="pcard-budget">💰 ${fmt(p.budget)} FCFA</div>
       ${p.notes?`<div class="pcard-note">${p.notes}</div>`:''}
       <div class="pcard-actions">
         <button class="btn btn-outline btn-sm" style="flex:1" onclick="openModal('modal-prospect',window._prIdx[${pi}])">✏️ Modifier</button>
+        ${!isConverti ? `<button class="btn btn-green btn-sm" style="flex:1" onclick="convertirProspect(${pi})">✅ Convertir</button>` : ''}
         <button class="btn btn-red btn-sm" onclick="delRow('${K.pr}',window._prIdx[${pi}].id)">🗑</button>
       </div>
-    </div>`).join(''):'<div class="empty"><div class="empty-ico">🎯</div>Aucun prospect</div>';
+    </div>`;
+  }).join(''):`<div class="empty"><div class="empty-ico">${prF==='Converti'?'✅':'🎯'}</div>${prF==='Converti'?'Aucun prospect converti pour le moment':'Aucun prospect actif'}</div>`;
 }
 
 /* ══ RENDER STOCK ══ */
@@ -3490,13 +3566,11 @@ let fabOpen=false;
 const FAB_ACTIONS = {
   manager:    [
     {type:'ca',      label:'💰 Nouvelle vente',    cls:'g', ico:'📊'},
-    {type:'creance', label:'⚠️ Ajouter créance',   cls:'r', ico:'📋'},
     {type:'depense', label:'💸 Nouvelle dépense',  cls:'a', ico:'🧾'},
     {type:'prospect',label:'🎯 Nouveau prospect',  cls:'b', ico:'👤'},
     {type:'stmvt',   label:'📦 Mouvement stock',   cls:'p', ico:'📦'},
   ],
   commercial: [
-    {type:'creance', label:'⚠️ Ajouter créance',   cls:'r', ico:'📋'},
     {type:'prospect',label:'🎯 Nouveau prospect',  cls:'b', ico:'👤'},
   ],
   stock: [
@@ -3628,15 +3702,34 @@ function _sbDelTxn(id) {
 /* Charge TOUTES les données depuis Supabase au démarrage
    et remplace le localStorage (données partagées) */
 async function _loadShared() {
-  // Indicateur visuel
   const ind = document.createElement('div');
   ind.id = '_sb_ind';
   ind.innerHTML = '🔄 Synchronisation...';
   ind.style.cssText = 'position:fixed;top:8px;right:8px;background:#1B3A5C;color:#fff;font-size:.7rem;padding:4px 10px;border-radius:20px;z-index:9999;font-family:sans-serif;';
   document.body.appendChild(ind);
 
+  // IDs fictifs du seed à supprimer de Supabase une fois pour toutes
+  const FAKE_CL_IDS = ['cl0002','cl0003','cl0004','cl0005','cl0006','cl0007',
+    'cl0008','cl0009','cl0010','cl0011','cl0012','cl0013','cl0014','cl0015','cl0016'];
+  const FAKE_CR_IDS = ['cr0001','cr0002','cr0003','cr0004','cr0005',
+    'cr0006','cr0007','cr0008','cr0009','cr0010'];
+
+  // Nettoyage Supabase — tourne à chaque login (flag réinitialisé)
+  try{
+    // 1. Supprimer les faux clients par ID
+    await _SB.from('clients').delete().in('id', FAKE_CL_IDS);
+    // 2. Supprimer les fausses créances par ID
+    await _SB.from('creances').delete().in('id', FAKE_CR_IDS);
+    // 3. Vérifier s'il reste des vrais clients dans Supabase
+    const {data: clCheck} = await _SB.from('clients').select('id').limit(1);
+    const hasRealClients = (clCheck||[]).filter(r=>!FAKE_CL_IDS.includes(r.id)).length > 0;
+    if(!hasRealClients){
+      // Aucun vrai client → supprimer TOUTES les créances restantes dans Supabase
+      await _SB.from('creances').delete().neq('id','__never__');
+    }
+  }catch(e){ console.warn('Supabase cleanup:', e); }
+
   try {
-    // Charger toutes les tables en parallèle
     const [ca, cr, dep, pr, st, mv, cl, txn, ej, pt, av] = await Promise.all([
       _SB.from('ventes').select('*').order('date', {ascending:false}),
       _SB.from('creances').select('*').order('date', {ascending:false}),
@@ -3651,41 +3744,58 @@ async function _loadShared() {
       _SB.from('avances').select('*').order('date', {ascending:false}),
     ]);
 
-    const allEmpty = !ca.data?.length && !cl.data?.length && !st.data?.length;
+    const FAKE_CL = new Set(FAKE_CL_IDS);
+    const FAKE_CR = new Set(FAKE_CR_IDS);
+
+    // Filtrer les faux IDs des données reçues de Supabase
+    const clClean  = (cl.data||[]).filter(r=>!FAKE_CL.has(r.id));
+    const crClean  = (cr.data||[]).filter(r=>!FAKE_CR.has(r.id));
+
+    const allEmpty = !ca.data?.length && !clClean.length && !st.data?.length;
 
     if(allEmpty) {
-      // Tables vides → pousser les données localStorage vers Supabase
       ind.innerHTML = '📤 Premier démarrage...';
       await _pushLocalToSupabase();
     } else {
-      // Fonction de fusion : Supabase + entrées locales non encore synchronisées
       function mergeData(lsKey, sbRows){
         if(!sbRows?.length) return;
         const local = JSON.parse(localStorage.getItem(lsKey)||'[]');
         const sbIds = new Set(sbRows.map(r=>r.id));
-        // Garder les entrées locales qui ne sont pas encore dans Supabase
         const localOnly = local.filter(r => !sbIds.has(r.id));
-        if(localOnly.length){
-          // Repousser vers Supabase les entrées manquantes
-          localOnly.forEach(r => _sbUps(lsKey, r));
-        }
-        // Fusionner : Supabase en priorité + locales absentes de Supabase
+        if(localOnly.length){ localOnly.forEach(r => _sbUps(lsKey, r)); }
         const merged = [...sbRows, ...localOnly];
         localStorage.setItem(lsKey, JSON.stringify(merged));
       }
 
-      // Tables remplies → fusionner Supabase + localStorage
       mergeData('aj_ca',  ca.data);
-      mergeData('aj_cr',  cr.data);
+      // Créances : utiliser version filtrée (sans faux IDs)
+      if(crClean.length){
+        const localCr = JSON.parse(localStorage.getItem('aj_cr')||'[]')
+          .filter(r=>!FAKE_CR.has(r.id));
+        const sbIds = new Set(crClean.map(r=>r.id));
+        const localOnly = localCr.filter(r=>!sbIds.has(r.id));
+        if(localOnly.length){ localOnly.forEach(r=>_sbUps('aj_cr',r)); }
+        localStorage.setItem('aj_cr', JSON.stringify([...crClean,...localOnly]));
+      } else {
+        // Aucune vraie créance dans Supabase → vider le localStorage aussi
+        const localCr = JSON.parse(localStorage.getItem('aj_cr')||'[]')
+          .filter(r=>!FAKE_CR.has(r.id));
+        localStorage.setItem('aj_cr', JSON.stringify(localCr));
+      }
+      if(dep.data?.length) dep.data.forEach(d=>{ if(!d.cat && d.categorie) d.cat = d.categorie; });
       mergeData('aj_dep', dep.data);
       mergeData('aj_pr',  pr.data);
       mergeData('aj_st',  st.data);
       mergeData('aj_mv',  mv.data);
-      if(cl.data?.length) {
-        localStorage.setItem('aj_cl',  JSON.stringify(cl.data));
+      // Clients : utiliser version filtrée (sans faux IDs)
+      if(clClean.length){
+        localStorage.setItem('aj_cl', JSON.stringify(clClean));
         localStorage.setItem('aj_cl_seeded', '1');
+      } else {
+        // Aucun vrai client dans Supabase → tout vider
+        localStorage.setItem('aj_cl', JSON.stringify([]));
+        localStorage.setItem('aj_cr', JSON.stringify([]));
       }
-      // Transactions : stocker par client
       if(txn.data?.length) {
         const byClient = {};
         txn.data.forEach(t => {
@@ -3695,7 +3805,6 @@ async function _loadShared() {
         });
         Object.entries(byClient).forEach(([k,v]) => localStorage.setItem(k, JSON.stringify(v)));
       }
-      // Employés / Pointages / Avances
       if(ej.data?.length) localStorage.setItem('aj_ej', JSON.stringify(ej.data));
       if(av.data?.length) localStorage.setItem('aj_av', JSON.stringify(av.data));
       if(pt.data?.length) {
@@ -3708,7 +3817,6 @@ async function _loadShared() {
       }
     }
 
-    // Rafraîchir l'affichage
     seed(); badges(); render(curPg());
     ind.innerHTML = '✅ Synchronisé';
     setTimeout(() => ind.remove(), 2000);
@@ -3839,7 +3947,6 @@ function checkPin(){
 function doLogin(id){
   const u=USERS[id]; if(!u)return;
   SESSION={userId:id,user:u};
-  // Remettre à zéro pour prochaine fois
   _pinUser=null; _pinBuf='';
   document.getElementById('login-step2').style.display='none';
   document.getElementById('login-step1').style.display='grid';
@@ -3851,9 +3958,42 @@ function doLogin(id){
   document.getElementById('sb-role-label').textContent=u.nom+' · '+(roleLabel[u.role]||'');
   applyNav();
   buildFab();
+
+  // ── NETTOYAGE FORCÉ — tourne toujours, indépendamment du seed ──
+  _forceClean();
+
   seed(); badges();
   _loadShared();
   logActivity('Connexion','🔑 '+u.nom+' connecté(e)');
+}
+
+/* Supprime les faux clients et fausses créances du seed précédent.
+   Tourne à chaque login pour garantir un état propre. */
+function _forceClean(){
+  const FAKE_CL = new Set(['cl0002','cl0003','cl0004','cl0005','cl0006','cl0007',
+    'cl0008','cl0009','cl0010','cl0011','cl0012','cl0013','cl0014','cl0015','cl0016']);
+  const FAKE_CR = new Set(['cr0001','cr0002','cr0003','cr0004','cr0005',
+    'cr0006','cr0007','cr0008','cr0009','cr0010']);
+
+  // Nettoyer les faux clients
+  try{
+    const cls = JSON.parse(localStorage.getItem('aj_cl')||'[]');
+    const cleanedCl = cls.filter(c=>!FAKE_CL.has(c.id));
+    localStorage.setItem('aj_cl', JSON.stringify(cleanedCl));
+
+    // Règle absolue : si aucun vrai client → toutes les créances à zéro
+    if(cleanedCl.length === 0){
+      localStorage.setItem('aj_cr', JSON.stringify([]));
+      return; // Pas besoin de continuer
+    }
+  }catch(e){}
+
+  // Nettoyer les fausses créances par ID
+  try{
+    const crs = JSON.parse(localStorage.getItem('aj_cr')||'[]');
+    const cleanedCr = crs.filter(c=>!FAKE_CR.has(c.id));
+    localStorage.setItem('aj_cr', JSON.stringify(cleanedCr));
+  }catch(e){}
 }
 
 function logout(){
