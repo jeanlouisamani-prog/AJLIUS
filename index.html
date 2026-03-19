@@ -3756,7 +3756,18 @@ function _sbDel(lsKey, id) {
 
 /* Sauvegarde une transaction dans Supabase (background) */
 function _sbTxn(clientNom, row) {
-  const r = {...row, client_nom: clientNom};
+  // Mapper les champs locaux vers les colonnes Supabase
+  const r = {
+    id:          row.id,
+    client_nom:  clientNom,
+    date:        row.date,
+    ref:         row.ref||null,
+    produit:     row.produit||null,
+    montant_cmd: row.commande||null,
+    montant_pmt: row.paiement||null,
+    type:        row.commande && row.paiement ? 'both' : row.commande ? 'cmd' : 'pmt',
+    obs:         row.obs||null,
+  };
   _SB.from('transactions').upsert(r, {onConflict:'id'}).then(({error}) => {
     if(error) console.warn('Supabase txn:', error.message);
   });
@@ -3854,7 +3865,18 @@ async function _loadShared() {
         txn.data.forEach(t => {
           const k = 'aj_txn_' + (t.client_nom||'').toLowerCase().replace(/[^a-z0-9]/g,'_');
           if(!byClient[k]) byClient[k] = [];
-          byClient[k].push(t);
+          // Reconvertir colonnes Supabase → format local
+          byClient[k].push({
+            id:        t.id,
+            ref:       t.ref||'',
+            date:      t.date||'',
+            periode:   t.periode||'',
+            commande:  t.montant_cmd||null,
+            produit:   t.produit||null,
+            paiement:  t.montant_pmt||null,
+            obs:       t.obs||'',
+            client_nom:t.client_nom,
+          });
         });
         Object.entries(byClient).forEach(([k,v]) => localStorage.setItem(k, JSON.stringify(v)));
       }
@@ -3896,12 +3918,22 @@ async function _pushLocalToSupabase() {
   };
   await Promise.all(Object.keys(_TBL).map(push));
 
-  // Transactions
+  // Transactions — mapper commande/paiement → montant_cmd/montant_pmt
   const txnKeys = Object.keys(localStorage).filter(k => k.startsWith('aj_txn_'));
   for(const k of txnKeys) {
     const clientNom = k.replace('aj_txn_','').replace(/_/g,' ').toUpperCase().trim();
     const txns = JSON.parse(localStorage.getItem(k)||'[]');
-    const rows = txns.map(t => ({...t, client_nom: t.client_nom || clientNom}));
+    const rows = txns.map(t => ({
+      id:          t.id,
+      client_nom:  t.client_nom || clientNom,
+      date:        t.date||null,
+      ref:         t.ref||null,
+      produit:     t.produit||null,
+      montant_cmd: t.commande||null,
+      montant_pmt: t.paiement||null,
+      type:        t.commande && t.paiement ? 'both' : t.commande ? 'cmd' : 'pmt',
+      obs:         t.obs||null,
+    }));
     if(rows.length) {
       const {error} = await _SB.from('transactions').upsert(rows, {onConflict:'id'});
       if(error) console.warn('Push txn error:', error.message);
