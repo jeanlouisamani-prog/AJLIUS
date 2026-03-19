@@ -3756,11 +3756,11 @@ function _sbDel(lsKey, id) {
 
 /* Sauvegarde une transaction dans Supabase (background) */
 function _sbTxn(clientNom, row) {
-  // Mapper les champs locaux vers les colonnes Supabase
+  const dateVal = row.date && /^\d{4}-\d{2}-\d{2}$/.test(row.date) ? row.date : null;
   const r = {
     id:          row.id,
     client_nom:  clientNom,
-    date:        row.date,
+    date:        dateVal,
     ref:         row.ref||null,
     produit:     row.produit||null,
     montant_cmd: row.commande||null,
@@ -3926,7 +3926,7 @@ async function _pushLocalToSupabase() {
     const rows = txns.map(t => ({
       id:          t.id,
       client_nom:  t.client_nom || clientNom,
-      date:        t.date||null,
+      date:        (t.date && t.date.match(/^\d{4}-\d{2}-\d{2}$/)) ? t.date : null,
       ref:         t.ref||null,
       produit:     t.produit||null,
       montant_cmd: t.commande||null,
