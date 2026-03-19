@@ -3780,38 +3780,8 @@ async function _loadShared() {
   ind.style.cssText = 'position:fixed;top:8px;right:8px;background:#1B3A5C;color:#fff;font-size:.7rem;padding:4px 10px;border-radius:20px;z-index:9999;font-family:sans-serif;';
   document.body.appendChild(ind);
 
-  // IDs fictifs du seed à supprimer de Supabase
-  const FAKE_CL_IDS = ['cl0002','cl0003','cl0004','cl0005','cl0006','cl0007',
-    'cl0008','cl0009','cl0010','cl0011','cl0012','cl0013','cl0014','cl0015','cl0016'];
-  const FAKE_CR_IDS = ['cr0001','cr0002','cr0003','cr0004','cr0005',
-    'cr0006','cr0007','cr0008','cr0009','cr0010'];
-  // Noms fictifs à bloquer même si leurs IDs ont changé
-  const FAKE_NAMES = new Set(['KOUAME','SORY SALIF','TOURE MAMADOU','MAHAMANE SALIF',
-    'BOUDA','BONKOUNGOU ISSOUF','ZOGBE FIDEL','AROUNA LAKOTA','SAVADOGO','OUDA',
-    'KONAN','CABEMA','DAGO','JACQUE','BONIPHON CHRISTELLE']);
-
-  // ── NETTOYAGE SUPABASE COMPLET à chaque login ──
-  try{
-    ind.innerHTML = '🧹 Nettoyage...';
-    // Supprimer TOUS les clients, créances et transactions de Supabase
-    await Promise.all([
-      _SB.from('clients').delete().neq('id','__never__'),
-      _SB.from('creances').delete().neq('id','__never__'),
-      _SB.from('transactions').delete().neq('id','__never__'),
-    ]);
-    // Récupérer les vrais clients locaux (non fictifs par ID ni par nom)
-    const vraisClients = JSON.parse(localStorage.getItem('aj_cl')||'[]')
-      .filter(c=>!FAKE_CL_IDS.includes(c.id) && !FAKE_NAMES.has((c.nom||'').toUpperCase().trim()));
-    localStorage.setItem('aj_cl', JSON.stringify(vraisClients));
-    localStorage.setItem('aj_cr', JSON.stringify([]));
-    // Supprimer transactions des faux clients du localStorage
-    const nomsVrais = new Set(vraisClients.map(c=>c.nom.toLowerCase().replace(/[^a-z0-9]/g,'_')));
-    Object.keys(localStorage).filter(k=>k.startsWith('aj_txn_')).forEach(k=>{
-      if(!nomsVrais.has(k.replace('aj_txn_',''))) localStorage.removeItem(k);
-    });
-    // Clients et créances gérés uniquement en local — pas de push vers Supabase
-    vraisClients.forEach(c => syncCreanceFromFiche(c));
-  }catch(e){ console.warn('Supabase full cleanup:', e); }
+  // Supabase est propre (vidé manuellement) — rien à faire ici
+  // Clients et créances gérés uniquement en local
 
   try {
     // Clients, créances et transactions sont gérés localement — ne pas les tirer de Supabase
@@ -4019,46 +3989,23 @@ function doLogin(id){
 /* Supprime les faux clients et fausses créances du seed précédent.
    Tourne à chaque login pour garantir un état propre. */
 function _forceClean(){
+  // Supabase déjà vidé manuellement — juste nettoyer les faux IDs du localStorage
   const FAKE_CL = new Set(['cl0002','cl0003','cl0004','cl0005','cl0006','cl0007',
     'cl0008','cl0009','cl0010','cl0011','cl0012','cl0013','cl0014','cl0015','cl0016']);
   const FAKE_CR = new Set(['cr0001','cr0002','cr0003','cr0004','cr0005',
     'cr0006','cr0007','cr0008','cr0009','cr0010']);
-  const FAKE_NAMES_CL = new Set(['KOUAME','SORY SALIF','TOURE MAMADOU','MAHAMANE SALIF',
-    'BOUDA','BONKOUNGOU ISSOUF','ZOGBE FIDEL','AROUNA LAKOTA','SAVADOGO','OUDA',
-    'KONAN','CABEMA','DAGO','JACQUE','BONIPHON CHRISTELLE']);
 
-  // Nettoyer les faux clients (par ID et par nom)
-  let vraisClients = [];
   try{
     const cls = JSON.parse(localStorage.getItem('aj_cl')||'[]');
-    vraisClients = cls.filter(c=>!FAKE_CL.has(c.id) && !FAKE_NAMES_CL.has((c.nom||'').toUpperCase().trim()));
-    localStorage.setItem('aj_cl', JSON.stringify(vraisClients));
+    const cleaned = cls.filter(c=>!FAKE_CL.has(c.id));
+    localStorage.setItem('aj_cl', JSON.stringify(cleaned));
   }catch(e){}
 
-  // Règle absolue : si aucun vrai client → tout vider
-  if(vraisClients.length === 0){
-    localStorage.setItem('aj_cr', JSON.stringify([]));
-    // Supprimer TOUTES les transactions stockées localement
-    Object.keys(localStorage).filter(k=>k.startsWith('aj_txn_')).forEach(k=>localStorage.removeItem(k));
-    return;
-  }
-
-  // Il y a des vrais clients → garder seulement leurs transactions
-  const nomsVrais = new Set(vraisClients.map(c=>'aj_txn_'+c.nom.toLowerCase().replace(/[^a-z0-9]/g,'_')));
-  Object.keys(localStorage).filter(k=>k.startsWith('aj_txn_')).forEach(k=>{
-    if(!nomsVrais.has(k)) localStorage.removeItem(k);
-  });
-
-  // Nettoyer les fausses créances par ID
   try{
     const crs = JSON.parse(localStorage.getItem('aj_cr')||'[]');
-    const cleanedCr = crs.filter(c=>!FAKE_CR.has(c.id));
-    localStorage.setItem('aj_cr', JSON.stringify(cleanedCr));
+    const cleaned = crs.filter(c=>!FAKE_CR.has(c.id));
+    localStorage.setItem('aj_cr', JSON.stringify(cleaned));
   }catch(e){}
-
-  // Recalculer les créances depuis les fiches pour garantir la cohérence
-  // (délai pour que les fonctions soient disponibles)
-  setTimeout(()=>{ try{ vraisClients.forEach(c=>syncCreanceFromFiche(c)); rCr(); badges(); }catch(e){} }, 300);
 }
 
 function logout(){
