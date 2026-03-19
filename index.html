@@ -3784,7 +3784,7 @@ async function _loadShared() {
   try {
     // Charger CA, dépenses, prospects, stock, mouvements, employés depuis Supabase
     // Clients chargés aussi depuis Supabase pour sync multi-appareils
-    const [ca, dep, pr, st, mv, cl, cr, ej, pt, av] = await Promise.all([
+    const [ca, dep, pr, st, mv, cl, cr, txn, ej, pt, av] = await Promise.all([
       _SB.from('ventes').select('*').order('date', {ascending:false}),
       _SB.from('depenses').select('*').order('date', {ascending:false}),
       _SB.from('prospects').select('*').order('created_at', {ascending:false}),
@@ -3792,6 +3792,7 @@ async function _loadShared() {
       _SB.from('mouvements').select('*').order('date', {ascending:false}),
       _SB.from('clients').select('*').order('nom'),
       _SB.from('creances').select('*').order('date', {ascending:false}),
+      _SB.from('transactions').select('*').order('date', {ascending:true}),
       _SB.from('employes').select('*').order('nom'),
       _SB.from('pointages').select('*').order('date', {ascending:false}),
       _SB.from('avances').select('*').order('date', {ascending:false}),
@@ -3847,6 +3848,16 @@ async function _loadShared() {
         localStorage.setItem('aj_cl', JSON.stringify(merged));
       }
       if(ej.data?.length) localStorage.setItem('aj_ej', JSON.stringify(ej.data));
+      // Transactions : charger depuis Supabase et stocker par client
+      if(txn.data?.length){
+        const byClient = {};
+        txn.data.forEach(t => {
+          const k = 'aj_txn_' + (t.client_nom||'').toLowerCase().replace(/[^a-z0-9]/g,'_');
+          if(!byClient[k]) byClient[k] = [];
+          byClient[k].push(t);
+        });
+        Object.entries(byClient).forEach(([k,v]) => localStorage.setItem(k, JSON.stringify(v)));
+      }
       if(av.data?.length) localStorage.setItem('aj_av', JSON.stringify(av.data));
       if(pt.data?.length) {
         const byDate = {};
