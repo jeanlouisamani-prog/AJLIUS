@@ -3737,6 +3737,7 @@ function _sbUps(lsKey, row) {
     const {ca_anterieur, ...rClean} = r;
     r = rClean;
   }
+  // créances : sync normale vers Supabase
   _SB.from(tbl).upsert(r, {onConflict:'id'}).then(({error}) => {
     if(error){
       console.warn('Supabase sync:', tbl, error.message);
@@ -3783,13 +3784,14 @@ async function _loadShared() {
   try {
     // Charger CA, dépenses, prospects, stock, mouvements, employés depuis Supabase
     // Clients chargés aussi depuis Supabase pour sync multi-appareils
-    const [ca, dep, pr, st, mv, cl, ej, pt, av] = await Promise.all([
+    const [ca, dep, pr, st, mv, cl, cr, ej, pt, av] = await Promise.all([
       _SB.from('ventes').select('*').order('date', {ascending:false}),
       _SB.from('depenses').select('*').order('date', {ascending:false}),
       _SB.from('prospects').select('*').order('created_at', {ascending:false}),
       _SB.from('stock').select('*').order('cat'),
       _SB.from('mouvements').select('*').order('date', {ascending:false}),
       _SB.from('clients').select('*').order('nom'),
+      _SB.from('creances').select('*').order('date', {ascending:false}),
       _SB.from('employes').select('*').order('nom'),
       _SB.from('pointages').select('*').order('date', {ascending:false}),
       _SB.from('avances').select('*').order('date', {ascending:false}),
@@ -3817,6 +3819,16 @@ async function _loadShared() {
       mergeData('aj_pr',  pr.data);
       mergeData('aj_st',  st.data);
       mergeData('aj_mv',  mv.data);
+      // Créances : fusionner Supabase + localStorage
+      if(cr.data?.length){
+        const FAKE_CR = new Set(['cr0001','cr0002','cr0003','cr0004','cr0005',
+          'cr0006','cr0007','cr0008','cr0009','cr0010']);
+        const sbCr = cr.data.filter(c=>!FAKE_CR.has(c.id));
+        const localCr = JSON.parse(localStorage.getItem('aj_cr')||'[]').filter(c=>!FAKE_CR.has(c.id));
+        const sbIds = new Set(sbCr.map(c=>c.id));
+        const localOnly = localCr.filter(c=>!sbIds.has(c.id));
+        localStorage.setItem('aj_cr', JSON.stringify([...sbCr,...localOnly]));
+      }
       // Clients : fusionner Supabase + localStorage (sync multi-appareils)
       // Les faux IDs sont filtrés, ca_anterieur est préservé depuis localStorage
       if(cl.data?.length){
