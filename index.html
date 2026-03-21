@@ -839,7 +839,8 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;bac
   <div class="reset-banner">
     <span style="font-size:1.6rem;flex-shrink:0;">🔄</span>
     <div style="flex:1;"><div style="font-weight:800;font-size:.85rem;color:#c0392b;margin-bottom:3px;">Réinitialiser le cache local</div><div style="font-size:.74rem;color:#888;">Efface uniquement le cache de cet appareil. Les données Supabase sont préservées.</div></div>
-    <button onclick="if(confirm('Vider le cache local ?')){Object.keys(localStorage).filter(k=>k.startsWith('aj_')).forEach(k=>localStorage.removeItem(k));location.reload();}" style="flex-shrink:0;background:#e63946;color:#fff;border:none;padding:9px 18px;border-radius:9px;font-weight:700;font-size:.76rem;cursor:pointer;">🗑️ Vider cache</button>
+    <button onclick="if(confirm('Vider le cache local ?')){Object.keys(localStorage).filter(k=>k.startsWith('aj_')).forEach(k=>localStorage.removeItem(k));location.reload();}" style="flex-shrink:0;background:#e63946;color:#fff;border:none;padding:9px 18px;border-radius:9px;font-weight:700;font-size:.76rem;cursor:pointer;">🗑️ Cache local</button>
+      <button onclick="clearAllData()" style="flex-shrink:0;background:#7B1FA2;color:#fff;border:none;padding:9px 14px;border-radius:9px;font-weight:700;font-size:.76rem;cursor:pointer;">⚠️ Tout effacer</button>
   </div>
   <div class="params-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
     <div class="gcard">
@@ -2333,6 +2334,21 @@ function rRdvPage(){
   });
 }
 
+function clearAllData(){
+  if(!confirm('⚠️ Effacer TOUTES les données (localStorage + Supabase) ?\nCette action est irréversible.')) return;
+  if(!confirm('Confirmez une deuxième fois — toutes les données seront perdues.')) return;
+  // Vider localStorage
+  Object.keys(localStorage).filter(k=>k.startsWith('aj_')).forEach(k=>localStorage.removeItem(k));
+  // Vider Supabase
+  const tables=['ventes','depenses','clients','creances','transactions','prospects','stock','mouvements','employes','avances','devis'];
+  Promise.all(tables.map(t=>_SB.from(t).delete().neq('id','__none__')))
+    .then(function(){
+      toast('Toutes les données effacées');
+      setTimeout(function(){location.reload();},1000);
+    })
+    .catch(function(e){ console.error(e); location.reload(); });
+}
+
 function badges(){
   const ca26=ld(K.ca).filter(x=>x.annee==='2026').reduce((s,x)=>s+x.montant,0);
   const pct=(ca26/1e8*100).toFixed(1);
@@ -2685,8 +2701,18 @@ function saveClient(){
 function delClient(id){
   const cl=ld(K.cl).find(c=>c.id===id);
   PD={key:K.cl,id,extra:()=>{
-    // Supprimer aussi la créance associée
-    if(cl){ const crs=ld(K.cr).filter(c=>c.client.toLowerCase()!==cl.nom.toLowerCase()); sv(K.cr,crs); }
+    if(cl){
+      // Supprimer créances localement
+      const crs=ld(K.cr).filter(c=>c.client.toLowerCase()!==cl.nom.toLowerCase());
+      const deleted=ld(K.cr).filter(c=>c.client.toLowerCase()===cl.nom.toLowerCase());
+      sv(K.cr,crs);
+      // Supprimer créances dans Supabase
+      deleted.forEach(c=>{ _SB.from('creances').delete().eq('id',c.id).then(function(r){ if(r.error) console.warn('SB del creance:',r.error.message); }); });
+      // Supprimer aussi les transactions du client
+      const txKey='aj_txn_'+cl.nom.toLowerCase().replace(/[^a-z0-9]/g,'_');
+      localStorage.removeItem(txKey);
+      _SB.from('transactions').delete().eq('client_nom',cl.nom).then(function(r){ if(r.error) console.warn('SB del txn:',r.error.message); });
+    }
   }};
   document.getElementById('conf-ov').style.display='block';
   document.getElementById('conf-box').classList.add('open');
@@ -3553,6 +3579,8 @@ function sendDevisEmail(d){
   window.open(`mailto:${email}?subject=${subject}&body=${body}`,'_blank');
   toast('✉️ Email préparé ✓');
 }
+
+
 
 
 
