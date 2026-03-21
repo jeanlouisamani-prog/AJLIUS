@@ -1119,8 +1119,52 @@ function ups(key,d){ const a=ld(key),i=a.findIndex(x=>x.id===d.id); i>=0?a[i]=d:
 function _sbUps(lsKey, row){
   const tbl = _TBL[lsKey]; if(!tbl) return;
   let r = {...row};
-  if(tbl==='depenses'){ r = {id:r.id,date:r.date,libelle:r.libelle||'',categorie:r.categorie||r.cat||'',montant:r.montant||0,benef:r.benef||null,comment:r.comment||null}; }
-  _SB.from(tbl).upsert(r,{onConflict:'id'}).then(({error})=>{ if(error) console.warn('SB sync:',tbl,error.message); });
+  if(tbl==='depenses'){
+    r = {id:r.id,date:r.date,libelle:r.libelle||'',categorie:r.categorie||r.cat||'',montant:r.montant||0,benef:r.benef||null,comment:r.comment||null};
+  }
+  if(tbl==='devis'){
+    r = {
+      id:r.id, numero:r.numero||'', client:r.client||'',
+      date:r.date||null, cl_tel:r.cl_tel||null, cl_email:r.cl_email||null,
+      produit:r.produit||'', lignes:r.lignes||[],
+      qty:r.qty||null, prix:r.prix||null, total:r.total||0,
+      statut:r.statut||'brouillon', validite:r.validite||30, notes:r.notes||null
+    };
+  }
+  if(tbl==='prospects'){
+    r = {
+      id:r.id, nom:r.nom||'', loc:r.loc||null, wa:r.wa||null,
+      produit:r.produit||null, interet:r.interet||'',
+      budget:r.budget||null,
+      contact:r.contact&&r.contact.match(/^\d{4}-\d{2}-\d{2}$/)?r.contact:null,
+      statut:r.statut||'Actif', notes:r.notes||null
+    };
+  }
+  if(tbl==='employes'){
+    // Mapper les champs JS vers les colonnes SQL
+    r = {
+      id:r.id, nom:r.nom||'',
+      poste:r.tache||r.poste||'',
+      salaire:r.taux||r.salaire||0,
+      telephone:r.tel||r.telephone||null,
+      actif:r.actif!==false
+    };
+  }
+  if(tbl==='ventes'){
+    r = {id:r.id,date:r.date,client:r.client||'',produit:r.produit||'',montant:r.montant||0,mois:r.mois||null,annee:r.annee||'',localite:r.localite||null,note:r.note||null};
+  }
+  if(tbl==='prospects'){
+    r = {id:r.id,nom:r.nom||'',loc:r.loc||null,wa:r.wa||null,produit:r.produit||null,interet:r.interet||'',budget:r.budget||null,contact:r.contact||null,statut:r.statut||'',notes:r.notes||null,created_at:r.created_at||new Date().toISOString()};
+  }
+  if(tbl==='stock'){
+    r = {id:r.id,nom:r.nom||'',cat:r.cat||'',qty:r.qty||0,unite:r.unite||'',seuil:r.seuil||0,prix_unit:r.prix_unit||null};
+  }
+  if(tbl==='mouvements'){
+    r = {id:r.id,date:r.date||null,type:r.type||'',article:r.article||'',qty:r.qty||0,note:r.note||null};
+  }
+  _SB.from(tbl).upsert(r,{onConflict:'id'}).then(function(res){
+    if(res.error) console.warn('SB sync erreur', tbl, ':', res.error.message, '| data:', JSON.stringify(r).slice(0,100));
+  });
 }
 function _sbDel(lsKey, id){ const tbl=_TBL[lsKey]; if(!tbl) return; _SB.from(tbl).delete().eq('id',id).then(({error})=>{ if(error) console.warn('SB del:',error.message); }); }
 
@@ -1149,11 +1193,36 @@ function _sbDelTxn(id){ _SB.from('transactions').delete().eq('id',id).then(({err
 
 /* ══ LOAD FROM SUPABASE ══ */
 async function _loadShared(){
+  // Indicateur de synchronisation
   const ind = document.createElement('div');
-  ind.className='sync-ind'; ind.textContent='🔄 Synchronisation...';
+  ind.className='sync-ind';
+  ind.textContent='🔄 Synchronisation...';
   document.body.appendChild(ind);
+
+  // Fonction merge robuste : fusionne SB + local et pousse le local vers SB
+  function merge(lsKey, sbRows, sbError){
+    const local = ld(lsKey);
+    if(sbError){
+      console.warn('SB erreur table', lsKey, ':', sbError.message||sbError);
+      // Garder les données locales, essayer de les pousser quand même
+      local.forEach(r => _sbUps(lsKey, r));
+      return;
+    }
+    const rows = sbRows || [];
+    const sbIds = new Set(rows.map(r=>r.id));
+    // Pousser les lignes locales absentes de SB
+    local.filter(r=>!sbIds.has(r.id)).forEach(r=>_sbUps(lsKey, r));
+    // Fusionner : SB en priorité + locaux non encore dans SB
+    if(rows.length > 0){
+      sv(lsKey, [...rows, ...local.filter(r=>!sbIds.has(r.id))]);
+    } else {
+      // SB vide → garder local (les pousser vers SB est déjà fait)
+    }
+  }
+
   try{
-    const [ca,dep,pr,st,mv,cl,cr,txn,ej,av,dv] = await Promise.all([
+    // Charger toutes les tables en parallèle
+    const results = await Promise.allSettled([
       _SB.from('ventes').select('*').order('date',{ascending:false}),
       _SB.from('depenses').select('*').order('date',{ascending:false}),
       _SB.from('prospects').select('*').order('created_at',{ascending:false}),
@@ -1167,27 +1236,39 @@ async function _loadShared(){
       _SB.from('devis').select('*').order('date',{ascending:false}),
     ]);
 
-    function merge(lsKey, sbRows){
-      if(!sbRows?.length) return;
-      const local = ld(lsKey);
-      const sbIds = new Set(sbRows.map(r=>r.id));
-      local.filter(r=>!sbIds.has(r.id)).forEach(r=>_sbUps(lsKey,r));
-      sv(lsKey,[...sbRows,...local.filter(r=>!sbIds.has(r.id))]);
+    function getR(i){ return results[i].status==='fulfilled' ? results[i].value : {data:null,error:{message:'rejected'}}; }
+    const [rCa,rDep,rPr,rSt,rMv,rCl,rCr,rTxn,rEj,rAv,rDv] = results.map(r=>
+      r.status==='fulfilled' ? r.value : {data:null, error:{message:'Erreur réseau'}}
+    );
+
+    // Ventes
+    merge('aj_ca', rCa.data, rCa.error);
+
+    // Dépenses
+    if(rDep.data){
+      rDep.data.forEach(d=>{ if(!d.cat&&d.categorie) d.cat=d.categorie; });
     }
+    merge('aj_dep', rDep.data, rDep.error);
 
-    merge('aj_ca', ca.data);
-    if(dep.data?.length){ dep.data.forEach(d=>{ if(!d.cat&&d.categorie) d.cat=d.categorie; }); }
-    merge('aj_dep', dep.data);
-    merge('aj_pr', pr.data);
-    if(dv&&dv.data&&!dv.error) merge('aj_dv', dv.data);
-    merge('aj_st', st.data);
-    merge('aj_mv', mv.data);
-    if(ej.data?.length) sv('aj_ej', ej.data);
-    if(av.data?.length) sv('aj_av', av.data);
+    // Prospects
+    merge('aj_pr', rPr.data, rPr.error);
 
-    // Clients : décoder ca_anterieur depuis notes
-    if(cl.data?.length){
-      const sbCl = cl.data.map(c=>{
+    // Devis
+    merge('aj_dv', rDv.data, rDv.error);
+
+    // Stock
+    merge('aj_st', rSt.data, rSt.error);
+
+    // Mouvements
+    merge('aj_mv', rMv.data, rMv.error);
+
+    // Employés (pas de merge — SB est source de vérité)
+    if(rEj.data && rEj.data.length) sv('aj_ej', rEj.data);
+    if(rAv.data && rAv.data.length) sv('aj_av', rAv.data);
+
+    // Clients
+    if(!rCl.error && rCl.data){
+      const sbCl = rCl.data.map(c=>{
         const m = (c.notes||'').match(/^\[CA_ANT:([\d.]+)\]/);
         const caAnt = m ? parseFloat(m[1]) : 0;
         const notesClean = (c.notes||'').replace(/^\[CA_ANT:[\d.]+\]\s*/,'');
@@ -1195,39 +1276,53 @@ async function _loadShared(){
       });
       const localCl = ld('aj_cl');
       const sbIds = new Set(sbCl.map(c=>c.id));
-      // Préserver ca_anterieur du local si pas dans notes Supabase
-      const merged = sbCl.map(c=>{ const loc=localCl.find(l=>l.id===c.id); return loc&&loc.ca_anterieur&&!c.ca_anterieur?{...c,ca_anterieur:loc.ca_anterieur}:c; });
+      const merged = sbCl.map(c=>{
+        const loc=localCl.find(l=>l.id===c.id);
+        return loc&&loc.ca_anterieur&&!c.ca_anterieur ? {...c,ca_anterieur:loc.ca_anterieur} : c;
+      });
       localCl.filter(c=>!sbIds.has(c.id)).forEach(c=>{ merged.push(c); _sbUpsClient(c); });
       sv('aj_cl', merged);
+    } else if(rCl.error) {
+      console.warn('SB clients:', rCl.error.message);
+      ld('aj_cl').forEach(c=>_sbUpsClient(c));
     }
 
     // Créances
-    if(cr.data?.length){
+    if(!rCr.error && rCr.data){
       const localCr = ld('aj_cr');
-      const sbIds = new Set(cr.data.map(r=>r.id));
+      const sbIds = new Set(rCr.data.map(r=>r.id));
       localCr.filter(r=>!sbIds.has(r.id)).forEach(r=>_sbUpsCr(r));
-      sv('aj_cr',[...cr.data,...localCr.filter(r=>!sbIds.has(r.id))]);
+      sv('aj_cr', [...rCr.data, ...localCr.filter(r=>!sbIds.has(r.id))]);
+    } else if(rCr.error) {
+      console.warn('SB creances:', rCr.error.message);
     }
 
-    // Transactions : reconvertir montant_cmd/montant_pmt → commande/paiement
-    if(txn.data?.length){
+    // Transactions
+    if(!rTxn.error && rTxn.data && rTxn.data.length){
       const byClient = {};
-      txn.data.forEach(t=>{
-        const k = 'aj_txn_'+(t.client_nom||'').toLowerCase().replace(/[^a-z0-9]/g,'_');
+      rTxn.data.forEach(t=>{
+        const k='aj_txn_'+(t.client_nom||'').toLowerCase().replace(/[^a-z0-9]/g,'_');
         if(!byClient[k]) byClient[k]=[];
-        byClient[k].push({id:t.id,ref:t.ref||'',date:t.date||'',periode:t.periode||'',commande:t.montant_cmd||null,produit:t.produit||null,paiement:t.montant_pmt||null,obs:t.obs||''});
+        byClient[k].push({id:t.id,ref:t.ref||'',date:t.date||'',periode:t.periode||'',
+          commande:t.montant_cmd||null,produit:t.produit||null,
+          paiement:t.montant_pmt||null,obs:t.obs||''});
       });
       Object.entries(byClient).forEach(([k,v])=>localStorage.setItem(k,JSON.stringify(v)));
     }
 
+    // Succès
     badges(); render(curPg());
     ind.textContent='✅ Synchronisé';
-    setTimeout(()=>ind.remove(),2000);
+    setTimeout(()=>ind.remove(), 2000);
+
   }catch(err){
-    console.warn('SB hors ligne — mode local activé');
-    ind.remove(); // Silencieux : on travaille en local sans message rouge
+    console.error('SB sync erreur:', err);
+    ind.textContent='⚠️ Mode hors ligne';
+    ind.style.background='#C0392B';
+    setTimeout(()=>ind.remove(), 4000);
   }
 }
+
 
 /* ══ AUTH ══ */
 const DEFAULT_MEMBRES = [
@@ -3455,6 +3550,9 @@ function sendDevisEmail(d){
   window.open(`mailto:${email}?subject=${subject}&body=${body}`,'_blank');
   toast('✉️ Email préparé ✓');
 }
+
+
+
 
 
 
