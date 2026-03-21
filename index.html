@@ -1094,7 +1094,7 @@ const CATCOL = {'Main-d\'œuvre':'#2D6A4F','Transport & Logistique':'#2980B9','M
 const _TBL = {
   'aj_ca':'ventes','aj_dep':'depenses','aj_pr':'prospects',
   'aj_st':'stock','aj_mv':'mouvements','aj_ej':'employes','aj_av':'avances',
-  'aj_dv':'devis'
+  'aj_dv':'devis','aj_cl':'clients','aj_cr':'creances'
 };
 
 /* ══ STORAGE HELPERS ══ */
@@ -1199,25 +1199,21 @@ async function _loadShared(){
   ind.textContent='🔄 Synchronisation...';
   document.body.appendChild(ind);
 
-  // Fonction merge robuste : fusionne SB + local et pousse le local vers SB
+  // Merge : SB est source de vérité
+  // Les données locales non présentes dans SB sont poussées vers SB (nouvelles données)
+  // Les données SB écrasent le local (SB = référence)
   function merge(lsKey, sbRows, sbError){
-    const local = ld(lsKey);
     if(sbError){
       console.warn('SB erreur table', lsKey, ':', sbError.message||sbError);
-      // Garder les données locales, essayer de les pousser quand même
-      local.forEach(r => _sbUps(lsKey, r));
-      return;
+      return; // Garder local en cas d'erreur réseau
     }
     const rows = sbRows || [];
+    const local = ld(lsKey);
     const sbIds = new Set(rows.map(r=>r.id));
-    // Pousser les lignes locales absentes de SB
+    // Nouvelles données locales (pas encore dans SB) → pousser vers SB
     local.filter(r=>!sbIds.has(r.id)).forEach(r=>_sbUps(lsKey, r));
-    // Fusionner : SB en priorité + locaux non encore dans SB
-    if(rows.length > 0){
-      sv(lsKey, [...rows, ...local.filter(r=>!sbIds.has(r.id))]);
-    } else {
-      // SB vide → garder local (les pousser vers SB est déjà fait)
-    }
+    // SB est la source de vérité → écraser le local avec SB + nouvelles entrées locales
+    sv(lsKey, [...rows, ...local.filter(r=>!sbIds.has(r.id))]);
   }
 
   try{
@@ -3394,7 +3390,14 @@ function saveEj(){
   if(_ejEditId!==null){ ejs[_ejEditId]={...ejs[_ejEditId],...d,id:ejs[_ejEditId].id}; } else { ejs.push(d); }
   svEj(KEJ.ej,ejs); _sbUps(KEJ.ej,d); closeModal('modal-ej'); toast('Employé enregistré ✓'); rEJ();
 }
-function delEj(i){ const ejs=ldEj(KEJ.ej); ejs.splice(i,1); svEj(KEJ.ej,ejs); rEjListe(); rEjKPIs(); }
+function delEj(i){
+  const ejs=ldEj(KEJ.ej);
+  const deleted=ejs[i];
+  ejs.splice(i,1);
+  svEj(KEJ.ej,ejs);
+  if(deleted&&deleted.id) _SB.from('employes').delete().eq('id',deleted.id).then(function(r){ if(r.error) console.warn('SB del employe:',r.error.message); });
+  rEjListe(); rEjKPIs();
+}
 function fillEjSelect(){ document.getElementById('av-ej').innerHTML=ldEj(KEJ.ej).filter(e=>e.actif!==false).map(e=>`<option value="${e.id}">${e.nom}</option>`).join(''); }
 function saveAvance(){
   const ejId=gv('av-ej');
@@ -3550,6 +3553,7 @@ function sendDevisEmail(d){
   window.open(`mailto:${email}?subject=${subject}&body=${body}`,'_blank');
   toast('✉️ Email préparé ✓');
 }
+
 
 
 
