@@ -1225,7 +1225,7 @@ async function _loadShared(){
     const results = await Promise.allSettled([
       _SB.from('ventes').select('*').order('date',{ascending:false}),
       _SB.from('depenses').select('*').order('date',{ascending:false}),
-      _SB.from('prospects').select('*').order('created_at',{ascending:false}),
+      _SB.from('prospects').select('*').order('nom',{ascending:true}),
       _SB.from('stock').select('*').order('cat'),
       _SB.from('mouvements').select('*').order('date',{ascending:false}),
       _SB.from('clients').select('*').order('nom'),
@@ -3550,6 +3550,7 @@ function sendDevisEmail(d){
   window.open(`mailto:${email}?subject=${subject}&body=${body}`,'_blank');
   toast('✉️ Email préparé ✓');
 }
+
 
 
 
