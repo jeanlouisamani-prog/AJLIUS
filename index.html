@@ -1093,7 +1093,8 @@ const CATCOL = {'Main-d\'œuvre':'#2D6A4F','Transport & Logistique':'#2980B9','M
 // clients et creances : PAS dans Supabase sync auto — gérés via leurs propres fonctions
 const _TBL = {
   'aj_ca':'ventes','aj_dep':'depenses','aj_pr':'prospects',
-  'aj_st':'stock','aj_mv':'mouvements','aj_ej':'employes','aj_av':'avances'
+  'aj_st':'stock','aj_mv':'mouvements','aj_ej':'employes','aj_av':'avances',
+  'aj_dv':'devis'
 };
 
 /* ══ STORAGE HELPERS ══ */
@@ -1152,7 +1153,7 @@ async function _loadShared(){
   ind.className='sync-ind'; ind.textContent='🔄 Synchronisation...';
   document.body.appendChild(ind);
   try{
-    const [ca,dep,pr,st,mv,cl,cr,txn,ej,av] = await Promise.all([
+    const [ca,dep,pr,st,mv,cl,cr,txn,ej,av,dv] = await Promise.all([
       _SB.from('ventes').select('*').order('date',{ascending:false}),
       _SB.from('depenses').select('*').order('date',{ascending:false}),
       _SB.from('prospects').select('*').order('created_at',{ascending:false}),
@@ -1163,6 +1164,7 @@ async function _loadShared(){
       _SB.from('transactions').select('*').order('date',{ascending:true}),
       _SB.from('employes').select('*').order('nom'),
       _SB.from('avances').select('*').order('date',{ascending:false}),
+      _SB.from('devis').select('*').order('date',{ascending:false}),
     ]);
 
     function merge(lsKey, sbRows){
@@ -1177,6 +1179,7 @@ async function _loadShared(){
     if(dep.data?.length){ dep.data.forEach(d=>{ if(!d.cat&&d.categorie) d.cat=d.categorie; }); }
     merge('aj_dep', dep.data);
     merge('aj_pr', pr.data);
+    if(dv&&dv.data&&!dv.error) merge('aj_dv', dv.data);
     merge('aj_st', st.data);
     merge('aj_mv', mv.data);
     if(ej.data?.length) sv('aj_ej', ej.data);
@@ -2989,7 +2992,7 @@ function saveDevis(){
     notes:gv('dv-notes').trim()
   };
   if(!d.client){ toast('Client requis',true); return; }
-  ups(K.dv,d); closeModal('modal-devis'); toast('Devis enregistré ✓'); rDevis();
+  ups(K.dv,d); _sbUps(K.dv,d); closeModal('modal-devis'); toast('Devis enregistré ✓'); rDevis();
   logActivity('Devis','📋 '+d.numero+' · '+d.client+' — '+fmt(d.total)+' FCFA');
 }
 function filterDevis(f,el){ devisF=f; document.querySelectorAll('#page-devis .fpill').forEach(p=>p.classList.remove('on')); el.classList.add('on'); rDevis(); }
@@ -3452,6 +3455,8 @@ function sendDevisEmail(d){
   window.open(`mailto:${email}?subject=${subject}&body=${body}`,'_blank');
   toast('✉️ Email préparé ✓');
 }
+
+
 
 
 
